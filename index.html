@@ -1,0 +1,3237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PokéQuest — Île des Dragons Célestes</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --red:#e63946;--yellow:#ffd60a;--green:#2dc653;--blue:#4cc9f0;
+  --purple:#c77dff;--orange:#ff9a3c;--dark:#0d0d1a;--darker:#070710;
+  --panel:rgba(255,255,255,0.07);--border:rgba(255,255,255,0.13);
+  --white:#f8f9ff;--gold:#ffd60a;--pokered:#CC0000;--pokered2:#FF3333;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:100vw;height:100vh;overflow:hidden;font-family:'Nunito',sans-serif;font-weight:700;background:var(--dark);color:var(--white)}
+
+/* ── BG ── */
+#bg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse at 50% 30%,#1a1040 0%,#0d0d1a 60%,#070710 100%)}
+#bg-img{position:fixed;inset:-40px;z-index:0;background-image:url('IMG_0268.jpeg');background-size:cover;background-position:center;opacity:0.18;transition:opacity 0.8s, transform 0.12s ease-out;will-change:transform}
+#bg-light{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle 300px at 50% 50%, rgba(255,214,10,0.07) 0%, transparent 70%);transition:background 0.08s ease-out;will-change:background}
+body.battle #bg-img{opacity:0.07;filter:hue-rotate(190deg) saturate(2)}
+body.menu #bg-img{opacity:0.12;filter:blur(4px)}
+/* Switch pokemon in battle */
+#switch-pokemon-menu{display:none;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.8);align-items:center;justify-content:center}
+#switch-pokemon-menu.active{display:flex}
+.switch-poke-card{background:rgba(10,10,30,.92);border:2px solid var(--border);border-radius:12px;padding:.8rem 1rem;text-align:center;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.3rem;min-width:110px}
+.switch-poke-card:hover{border-color:var(--yellow);transform:translateY(-2px);background:rgba(255,214,10,.08)}
+.switch-poke-card.fainted{opacity:.35;cursor:not-allowed;pointer-events:none}
+.switch-poke-card.active-poke{border-color:var(--green);background:rgba(45,198,83,.08)}
+
+/* ── PARTICLES ── */
+#particles{position:fixed;inset:0;pointer-events:none;z-index:1}
+.spark{position:absolute;border-radius:50%;animation:floatStar linear infinite;opacity:0}
+@keyframes floatStar{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:.7}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
+
+/* ── POKEBALL LOGO DECORATION ── */
+.pokeball-deco{width:200px;height:200px;border-radius:50%;border:12px solid var(--pokered);position:relative;overflow:hidden;margin:0 auto}
+.pokeball-deco::before{content:'';position:absolute;top:50%;left:0;right:0;height:12px;background:var(--pokered);transform:translateY(-50%);z-index:2}
+.pokeball-deco::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;background:var(--white);border:10px solid var(--pokered);z-index:3}
+.pokeball-top{position:absolute;top:0;left:0;right:0;height:50%;background:var(--pokered)}
+.pokeball-bottom{position:absolute;bottom:0;left:0;right:0;height:50%;background:#f0f0f0}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;opacity:0;pointer-events:none;transition:opacity 0.5s ease}
+.screen.active{opacity:1;pointer-events:all}
+
+/* ── TITLE ── */
+#screen-title{gap:1.5rem}
+.title-logo{display:flex;flex-direction:column;align-items:center;gap:0.3rem}
+.title-pokemon{font-family:'Press Start 2P',monospace;font-size:clamp(1.8rem,6vw,3.5rem);color:var(--yellow);text-shadow:4px 4px 0 var(--pokered),-1px -1px 0 #ff6600,3px 3px 0 #cc4400;letter-spacing:0.05em;animation:titleBounce 2s ease-in-out infinite}
+.title-sub-game{font-family:'Press Start 2P',monospace;font-size:clamp(0.5rem,1.5vw,0.8rem);color:var(--white);text-shadow:2px 2px 0 #000;letter-spacing:0.1em;text-align:center;line-height:1.8}
+@keyframes titleBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.02)}}
+.title-island{font-family:'Nunito',sans-serif;font-weight:900;font-size:clamp(0.7rem,1.8vw,1rem);color:rgba(255,255,255,0.7);letter-spacing:.15em;text-transform:uppercase;background:rgba(0,0,0,0.3);padding:.3rem 1.2rem;border-radius:999px}
+
+/* ── POKEMON SPRITE DISPLAY ── */
+.poke-display{width:96px;height:96px;image-rendering:pixelated;image-rendering:crisp-edges}
+.poke-display-lg{width:140px;height:140px;image-rendering:pixelated;filter:drop-shadow(0 0 20px rgba(255,214,10,0.7));animation:pokeBounce 2s ease-in-out infinite}
+.poke-display-enemy{width:140px;height:140px;image-rendering:pixelated;filter:drop-shadow(0 0 20px rgba(230,57,70,0.6));animation:pokeBounce 1.8s ease-in-out infinite;animation-delay:-0.9s}
+@keyframes pokeBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.06)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+@keyframes flashWhite{0%,100%{filter:none}50%{filter:brightness(10) saturate(0)}}
+.sprite-hurt{animation:shake 0.4s ease, flashWhite 0.4s ease!important}
+
+/* ── BUTTONS ── */
+.btn{font-family:'Press Start 2P',monospace;font-size:0.6rem;letter-spacing:.04em;padding:.65rem 1.6rem;border:3px solid rgba(255,255,255,0.35);background:linear-gradient(180deg,#3a86ff,#1a5fc8);color:#fff;cursor:pointer;position:relative;overflow:hidden;transition:all .15s;border-radius:6px;box-shadow:0 4px 0 #0d3580,0 6px 15px rgba(58,134,255,.35);text-shadow:1px 1px 0 rgba(0,0,0,.5);image-rendering:pixelated}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #0d3580,0 8px 20px rgba(58,134,255,.5);filter:brightness(1.12)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0d3580}
+.btn.red{background:linear-gradient(180deg,#e63946,#a01e27);box-shadow:0 4px 0 #500f13}
+.btn.red:hover{box-shadow:0 6px 0 #500f13}
+.btn.green{background:linear-gradient(180deg,#2dc653,#1a8035);box-shadow:0 4px 0 #0c4019}
+.btn.green:hover{box-shadow:0 6px 0 #0c4019}
+.btn.yellow{background:linear-gradient(180deg,#ffd60a,#cc9900);color:#1a1a00;text-shadow:none;box-shadow:0 4px 0 #664d00}
+.btn.yellow:hover{box-shadow:0 6px 0 #664d00}
+.btn.purple{background:linear-gradient(180deg,#c77dff,#8a2be2);box-shadow:0 4px 0 #4a0080}
+.btn.purple:hover{box-shadow:0 6px 0 #4a0080}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── MENUS PANELS ── */
+.menu-panel{background:rgba(10,10,30,0.9);border:3px solid var(--border);padding:2rem 2rem;width:min(420px,94vw);display:flex;flex-direction:column;gap:1.1rem;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08)}
+.menu-title{font-family:'Press Start 2P',monospace;font-size:.7rem;text-align:center;color:var(--yellow);text-shadow:2px 2px 0 var(--pokered);border-bottom:2px solid rgba(255,214,10,.2);padding-bottom:.8rem;line-height:1.8}
+.input-label{font-family:'Press Start 2P',monospace;font-size:.5rem;letter-spacing:.12em;color:var(--blue);text-transform:uppercase}
+.game-input{background:rgba(255,255,255,.07);border:2px solid rgba(76,201,240,.4);color:var(--white);padding:.6rem 1rem;font-family:'Nunito',sans-serif;font-weight:700;font-size:1rem;outline:none;border-radius:8px;transition:border-color .3s;width:100%}
+.game-input:focus{border-color:var(--yellow)}
+.class-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.class-btn{padding:.7rem .5rem;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:rgba(255,255,255,.8);cursor:pointer;text-align:center;transition:all .2s;font-family:'Nunito',sans-serif;font-weight:800;font-size:.85rem;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:.4rem}
+.class-btn:hover{transform:translateY(-2px);border-color:var(--yellow);background:rgba(255,214,10,.1);color:var(--yellow)}
+.class-btn.selected{border-color:var(--yellow);background:linear-gradient(135deg,rgba(255,214,10,.15),rgba(255,154,60,.15));color:var(--yellow);box-shadow:0 0 16px rgba(255,214,10,.3)}
+.class-btn img{width:72px;height:72px;image-rendering:pixelated}
+.class-type{font-size:.7rem;opacity:.7}
+
+/* ── HUD ── */
+#hud{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .5s}
+#hud.visible{opacity:1;pointer-events:all}
+#hud-top{position:absolute;top:0;left:0;right:0;padding:.7rem 1rem;display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(to bottom,rgba(7,7,16,.85),transparent)}
+.hud-card{background:rgba(10,10,30,.75);border:2px solid var(--border);border-radius:10px;padding:.55rem .9rem;backdrop-filter:blur(8px)}
+.stat-name-hud{font-family:'Press Start 2P',monospace;font-size:.4rem;letter-spacing:.12em;color:var(--yellow);text-transform:uppercase;margin-bottom:.2rem}
+.bar-wrap{width:160px;height:14px;background:rgba(0,0,0,.5);border-radius:999px;overflow:hidden;border:2px solid rgba(255,255,255,.18);box-shadow:inset 0 2px 4px rgba(0,0,0,.5)}
+.bar-fill{height:100%;border-radius:999px;transition:width .4s ease;box-shadow:0 0 8px currentColor}
+.bar-fill.hp{background:linear-gradient(90deg,#e63946,#ff6b9d)}
+.bar-fill.mp{background:linear-gradient(90deg,#4cc9f0,#c77dff)}
+.bar-fill.xp{background:linear-gradient(90deg,#ffd60a,#ff9a3c)}
+.stat-val{font-size:.58rem;color:rgba(255,255,255,.65);margin-top:.15rem}
+#player-name-hud{font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--yellow);text-shadow:1px 1px 0 #000;margin-bottom:.4rem;line-height:1.5}
+#gold-display{font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--yellow);display:flex;align-items:center;gap:.3rem;background:rgba(0,0,0,.4);padding:.3rem .7rem;border-radius:999px;border:1px solid rgba(255,214,10,.35)}
+#zone-label{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P',monospace;font-size:clamp(.8rem,2vw,1.1rem);color:var(--white);text-align:center;background:rgba(10,10,30,.85);padding:.6rem 2rem;border-radius:8px;border:2px solid var(--yellow);opacity:0;pointer-events:none;transition:opacity .4s;text-shadow:2px 2px 0 #000}
+#zone-label.show{opacity:1}
+#hud-bottom{position:absolute;bottom:0;left:0;right:0;padding:.7rem 1rem 1rem;display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(to top,rgba(7,7,16,.85),transparent);gap:.8rem}
+#message-box{flex:1;background:rgba(10,10,30,.82);border:2px solid var(--border);backdrop-filter:blur(8px);padding:.6rem .9rem;font-size:.85rem;line-height:1.5;color:var(--white);min-height:2.8rem;border-radius:8px;font-family:'Nunito',sans-serif;font-weight:700}
+#action-btns{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
+#action-btns .btn{font-size:.45rem;padding:.45rem .8rem}
+#minimap{width:85px;height:65px;border:2px solid rgba(255,255,255,.25);background:rgba(10,10,30,.8);backdrop-filter:blur(4px);overflow:hidden;border-radius:8px}
+#minimap canvas{width:100%;height:100%}
+
+/* ── BATTLE ── */
+#screen-battle{flex-direction:column;justify-content:center;align-items:center;padding:0;background:rgba(7,7,16,.5)}
+#battle-arena{display:flex;align-items:center;justify-content:space-around;width:min(700px,97vw);position:relative;padding:.6rem 1.2rem;flex-shrink:0}
+#battle-log{margin:.3rem auto!important;width:min(700px,97vw)!important}
+#battle-actions{padding:.4rem 1.2rem .9rem!important;width:min(700px,97vw);display:flex;gap:.55rem;justify-content:center;flex-wrap:wrap}
+#battle-turn-info{padding:.2rem .4rem!important;text-align:center}
+.combatant{display:flex;flex-direction:column;align-items:center;gap:.5rem;background:rgba(10,10,30,.7);border:2px solid var(--border);border-radius:16px;padding:.8rem 1.2rem;backdrop-filter:blur(6px);position:relative}
+.combatant-name{font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--yellow);text-shadow:1px 1px 0 #000}
+.combatant-level{font-family:'Press Start 2P',monospace;font-size:.4rem;color:rgba(255,255,255,.6)}
+.hp-battle{width:160px;height:14px;background:rgba(0,0,0,.5);border-radius:999px;border:2px solid rgba(255,255,255,.2);overflow:hidden;margin-top:.2rem;box-shadow:inset 0 2px 4px rgba(0,0,0,.5)}
+.hp-battle-fill{height:100%;background:linear-gradient(90deg,#2dc653,#06d6a0);border-radius:999px;transition:width .5s ease;box-shadow:0 0 6px #2dc653}
+.hp-text{font-family:'Press Start 2P',monospace;font-size:.4rem;color:rgba(255,255,255,.6)}
+#battle-log{background:rgba(10,10,30,.85);border:2px solid var(--border);backdrop-filter:blur(8px);padding:.8rem 1.2rem;font-size:.85rem;font-family:'Nunito',sans-serif;font-weight:800;color:var(--white);text-align:center;width:100%;max-width:600px;margin:.5rem auto;min-height:3rem;border-radius:10px;line-height:1.5}
+#battle-actions{display:flex;gap:.55rem;justify-content:center;flex-wrap:wrap;padding-top:.3rem}
+#battle-actions .btn{font-size:.45rem;padding:.5rem 1rem}
+
+/* ── ATTACK ANIMATIONS ── */
+#anim-layer{position:absolute;inset:0;pointer-events:none;z-index:20}
+.anim-particle{position:absolute;pointer-events:none;animation:animFade .6s ease forwards}
+@keyframes animFade{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0) translateY(-30px)}}
+@keyframes flameAnim{0%{opacity:1;transform:translateX(0) scale(1)}100%{opacity:0;transform:translateX(80px) scaleX(3) scaleY(.5)}}
+@keyframes waterAnim{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.5)}}
+@keyframes leafAnim{0%{opacity:1;transform:rotate(0deg) translateX(0)}100%{opacity:0;transform:rotate(360deg) translateX(70px)}}
+@keyframes thunderAnim{0%{opacity:1;transform:scaleY(0)}50%{opacity:1;transform:scaleY(1)}100%{opacity:0;transform:scaleY(1)}}
+@keyframes normalAnim{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(2.5)}}
+@keyframes pokeballThrow{0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1)}60%{opacity:1;transform:translate(200px,-30px) rotate(720deg) scale(.7)}80%{opacity:1;transform:translate(195px,-25px) rotate(720deg) scale(1.2)}100%{opacity:1;transform:translate(195px,-20px) rotate(720deg) scale(.8)}}
+@keyframes pokeballWobble{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-15deg)}75%{transform:rotate(15deg)}}
+@keyframes pokeballCatch{0%{opacity:1}100%{opacity:0;transform:scale(0.5) translateY(30px)}}
+@keyframes captureFail{0%,100%{transform:rotate(0deg);opacity:1}30%{transform:rotate(-20deg)}50%{transform:scale(1.3)}100%{opacity:0;transform:scale(1.5) translateY(-20px)}}
+
+/* ── MENU SCREENS ── */
+#screen-menu{background:rgba(7,7,16,.88);backdrop-filter:blur(14px)}
+#screen-inventory{background:rgba(7,7,16,.95);backdrop-filter:blur(18px);padding:1.5rem;gap:1rem;overflow-y:auto}
+#screen-shop{background:rgba(7,7,16,.95);backdrop-filter:blur(14px)}
+#screen-team{background:rgba(7,7,16,.95);backdrop-filter:blur(14px);padding:1.5rem;overflow-y:auto}
+
+/* ── INVENTORY ── */
+.inv-container{width:min(800px,97vw);display:flex;flex-direction:column;gap:1rem;max-height:90vh;overflow-y:auto}
+.inv-tabs{display:flex;gap:.5rem}
+.inv-tab{font-family:'Press Start 2P',monospace;font-size:.45rem;padding:.5rem 1rem;border:2px solid var(--border);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);cursor:pointer;border-radius:8px 8px 0 0;transition:all .2s}
+.inv-tab.active{background:rgba(255,255,255,.1);border-color:var(--yellow);color:var(--yellow)}
+.inv-content{background:rgba(10,10,30,.85);border:2px solid var(--border);border-radius:0 10px 10px 10px;padding:1.2rem}
+.inv-panel h3{font-family:'Press Start 2P',monospace;font-size:.55rem;margin-bottom:.9rem;color:var(--blue);text-shadow:1px 1px 0 #000;line-height:1.6}
+.stat-row{display:flex;justify-content:space-between;padding:.3rem 0;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.stat-row span:last-child{color:var(--yellow)}
+.item-grid-display{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:.6rem;margin-top:.5rem}
+.item-card{background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12);border-radius:10px;padding:.6rem;text-align:center;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.item-card:hover{border-color:var(--yellow);background:rgba(255,214,10,.1);transform:translateY(-2px)}
+.item-card img{width:40px;height:40px;image-rendering:pixelated}
+.item-card-name{font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--white);line-height:1.5}
+.item-card-qty{font-size:.7rem;color:var(--yellow)}
+.item-card.empty{opacity:.2;cursor:default}
+.item-card.empty:hover{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.06);transform:none}
+
+/* TEAM */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.8rem;width:min(700px,97vw)}
+.pokemon-card{background:rgba(10,10,30,.85);border:2px solid var(--border);border-radius:12px;padding:1rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.4rem;transition:all .2s}
+.pokemon-card:hover{border-color:var(--yellow);transform:translateY(-2px)}
+.pokemon-card img{width:80px;height:80px;image-rendering:pixelated}
+.poke-card-name{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--yellow);line-height:1.6}
+.poke-card-level{font-size:.7rem;color:rgba(255,255,255,.6)}
+.poke-type-badge{font-family:'Press Start 2P',monospace;font-size:.35rem;padding:.2rem .5rem;border-radius:4px}
+
+/* ── SHOP ── */
+.shop-panel{background:rgba(10,10,30,.9);border:3px solid rgba(255,214,10,.3);border-radius:12px;padding:1.5rem;width:min(450px,94vw);display:flex;flex-direction:column;gap:1rem}
+.shop-title{font-family:'Press Start 2P',monospace;font-size:.65rem;color:var(--yellow);text-align:center;text-shadow:2px 2px 0 var(--pokered);line-height:2}
+.shop-gold{font-family:'Press Start 2P',monospace;font-size:.5rem;color:var(--gold);text-align:center}
+.shop-items{display:flex;flex-direction:column;gap:.5rem;max-height:60vh;overflow-y:auto}
+.shop-item{display:flex;align-items:center;gap:.8rem;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.1);border-radius:8px;padding:.6rem .9rem;transition:all .2s}
+.shop-item:hover{border-color:var(--yellow);background:rgba(255,214,10,.07)}
+.shop-item img{width:36px;height:36px;image-rendering:pixelated}
+.shop-item-info{flex:1}
+.shop-item-name{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--white);line-height:1.7}
+.shop-item-desc{font-size:.7rem;color:rgba(255,255,255,.55);margin-top:.15rem}
+.shop-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--yellow)}
+.shop-item-btn{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:.4rem .7rem;background:linear-gradient(180deg,#ffd60a,#cc9900);color:#1a1a00;border:2px solid rgba(255,255,255,.3);border-radius:6px;cursor:pointer;box-shadow:0 3px 0 #664d00;transition:all .15s}
+.shop-item-btn:hover{transform:translateY(-1px)}
+.shop-item-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #664d00}
+
+/* ── NOTIFICATION ── */
+#notif{position:fixed;top:5rem;left:50%;transform:translateX(-50%) translateY(-20px);background:linear-gradient(135deg,var(--yellow),var(--orange));color:#1a1a00;padding:.5rem 1.8rem;font-family:'Press Start 2P',monospace;font-size:.5rem;z-index:100;opacity:0;transition:all .35s;pointer-events:none;border-radius:8px;box-shadow:0 6px 0 #664d00;line-height:1.8}
+#notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* TYPE BADGE COLORS */
+.type-Feu{background:#ff6030;color:#fff}
+.type-Eau{background:#4488ff;color:#fff}
+.type-Plante{background:#44bb44;color:#fff}
+.type-Normal{background:#9999aa;color:#fff}
+.type-Électrik{background:#ffcc00;color:#333}
+.type-Psy{background:#ff4499;color:#fff}
+.type-Vol{background:#88aaee;color:#fff}
+.type-Dragon{background:#7038f8;color:#fff}
+.type-Poison{background:#aa44bb;color:#fff}
+.type-Combat{background:#994422;color:#fff}
+.type-Eau{background:#4488ff;color:#fff}
+
+/* POKE DETAIL MENU */
+.pd-move-card{background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.15);border-radius:10px;padding:.6rem .9rem;cursor:pointer;transition:all .18s}
+.pd-move-card:hover{border-color:var(--yellow);background:rgba(255,214,10,.08)}
+.pd-move-card.selected{border-color:var(--blue);background:rgba(76,201,240,.1);box-shadow:0 0 10px rgba(76,201,240,.3)}
+.pd-learn-card{background:rgba(45,198,83,.07);border:2px solid rgba(45,198,83,.25);border-radius:8px;padding:.45rem .7rem;cursor:pointer;transition:all .18s}
+.pd-learn-card:hover{border-color:var(--green);background:rgba(45,198,83,.15);transform:translateX(4px)}
+
+/* SHINY */
+.pokemon-card.shiny-card { border-color:#ffd700!important; box-shadow:0 0 18px rgba(255,215,0,.5)!important; background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,150,0,.05))!important; }
+@keyframes shinyPulse { 0%,100%{box-shadow:0 0 12px rgba(255,215,0,.4)} 50%{box-shadow:0 0 24px rgba(255,215,0,.8)} }
+.shiny-card { animation:shinyPulse 2s ease-in-out infinite; }
+
+/* ATTACK USES DISPLAY */
+.atk-use-pip{width:10px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.15);transition:all .2s;display:inline-block}
+.atk-use-pip.available{background:var(--yellow);border-color:var(--yellow);box-shadow:0 0 5px rgba(255,214,10,.5)}
+.atk-use-pip.magic{background:var(--purple);border-color:var(--purple);box-shadow:0 0 5px rgba(199,125,255,.5)}
+.atk-use-label{font-family:'Press Start 2P',monospace;font-size:.3rem;color:rgba(255,255,255,.5);margin-right:.15rem;line-height:10px}
+/* ELEMENT BADGES */
+.elem-Feu{background:#ff4500;color:#fff}
+.elem-Eau{background:#0077b6;color:#fff}
+.elem-Plante{background:#2d6a4f;color:#fff}
+.elem-Électrik{background:#f8c537;color:#000}
+.elem-Glace{background:#90e0ef;color:#000}
+.elem-Psy{background:#c77dff;color:#fff}
+.elem-Normal{background:#777;color:#fff}
+.elem-Dragon{background:#6a0dad;color:#fff}
+.elem-Combat{background:#7c3a00;color:#fff}
+.elem-Poison{background:#800080;color:#fff}
+.elem-Roche{background:#7d5a50;color:#fff}
+.elem-Spectre{background:#3d348b;color:#fff}
+.elem-Vol{background:#4895ef;color:#fff}
+.elem-Sol{background:#d4a017;color:#000}
+.elem-Insecte{background:#588157;color:#fff}
+.elem-Acier{background:#adb5bd;color:#000}
+.elem-Ténèbres{background:#1c1c1c;color:#fff}
+.elem-Fée{background:#f472b6;color:#fff}
+.atk-elem-badge{font-family:'Press Start 2P',monospace;font-size:.28rem;padding:.12rem .35rem;border-radius:3px;display:inline-block;margin-left:.3rem;vertical-align:middle}
+#catch-display{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;flex-direction:column;align-items:center;z-index:30}
+#catch-display.active{display:flex}
+#catch-ball-anim{font-size:3rem;animation:pokeballWobble 0.4s ease-in-out 3}
+
+/* CAPTURED MESSAGE */
+#captured-msg{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P',monospace;font-size:.9rem;color:var(--yellow);text-shadow:3px 3px 0 #000;text-align:center;line-height:2;z-index:35;background:rgba(0,0,0,.7);padding:1rem 2rem;border-radius:10px;border:3px solid var(--yellow)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,214,10,.5);border-radius:2px}
+
+/* ── MAP ── */
+#screen-map{background:#1a1a2e;padding:0;flex-direction:row;align-items:stretch;justify-content:flex-start;overflow:hidden}
+#map-sidebar{width:210px;min-width:190px;flex-shrink:0;background:rgba(10,10,30,.97);border-right:2px solid rgba(255,214,10,.25);display:flex;flex-direction:column;overflow:hidden;z-index:10}
+#map-sidebar-header{padding:.6rem .7rem .4rem;border-bottom:2px solid rgba(255,214,10,.2);flex-shrink:0}
+#map-sidebar-title{font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--yellow);text-shadow:2px 2px 0 var(--pokered);line-height:2}
+#map-cur-zone-lbl{font-family:'Press Start 2P',monospace;font-size:.3rem;color:rgba(255,255,255,.4);margin-top:.25rem;line-height:1.8}
+#zone-info-name{font-family:'Press Start 2P',monospace;font-size:.44rem;color:var(--yellow);line-height:1.8;padding:.5rem .7rem .15rem;text-shadow:1px 1px 0 #000}
+#zone-info-type-badge{font-family:'Press Start 2P',monospace;font-size:.28rem;padding:.12rem .45rem;border-radius:3px;margin:.1rem .7rem .25rem;display:inline-block}
+#zone-info-desc{font-size:.66rem;color:rgba(255,255,255,.5);line-height:1.5;padding:.1rem .7rem .45rem;border-bottom:1px solid rgba(255,255,255,.07)}
+#zone-info-pokes{display:flex;flex-wrap:wrap;gap:3px;padding:.45rem .65rem;border-bottom:1px solid rgba(255,255,255,.07);flex:1;align-content:flex-start}
+.zone-poke-mini{width:30px;height:30px;image-rendering:pixelated;cursor:pointer;transition:transform .12s}
+.zone-poke-mini:hover{transform:scale(1.3)}
+#map-legend{padding:.4rem .65rem;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:3px 7px;flex-shrink:0}
+.leg{display:flex;align-items:center;gap:3px;font-family:'Press Start 2P',monospace;font-size:.28rem;color:rgba(255,255,255,.45)}
+.leg-dot{width:7px;height:7px;border-radius:1px;flex-shrink:0}
+#map-btns{padding:.55rem .65rem;display:flex;flex-direction:column;gap:.35rem;flex-shrink:0}
+#map-btns .btn{font-size:.37rem;padding:.38rem .55rem}
+/* Zone de la carte */
+#map-canvas-wrap{flex:1;position:relative;overflow:hidden;background:linear-gradient(135deg,#0a1628 0%,#0d2144 40%,#1a3a5c 100%);cursor:default}
+/* Canvas overlay principal */
+#map-canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer}
+/* Tooltip */
+#map-tooltip{position:absolute;pointer-events:none;z-index:10;background:rgba(10,10,30,.97);border:2px solid var(--yellow);border-radius:5px;padding:.28rem .55rem;font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--yellow);white-space:nowrap;opacity:0;transition:opacity .12s;box-shadow:0 3px 0 rgba(0,0,0,.6),0 0 10px rgba(255,214,10,.25)}
+#map-tooltip.show{opacity:1}
+/* ── EVOLUTION ANIMATION ── */
+#evo-screen{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0);gap:1rem}
+#evo-screen.active{display:flex;animation:evoFlash 0.3s ease 4}
+@keyframes evoFlash{0%,100%{background:rgba(255,255,255,0)}50%{background:rgba(255,255,255,.8)}}
+#evo-sprite{width:160px;height:160px;image-rendering:pixelated;animation:evoSpin 0.4s linear infinite}
+@keyframes evoSpin{from{filter:brightness(10) saturate(0)}to{filter:brightness(1) saturate(1)}}
+#evo-text{font-family:'Press Start 2P',monospace;font-size:.9rem;color:var(--white);text-shadow:3px 3px 0 #000;text-align:center;line-height:2}
+</style>
+</head>
+<body class="menu">
+
+<div id="bg"></div>
+<div id="bg-img"></div>
+<div id="bg-light"></div>
+<div id="particles"></div>
+<div id="notif"></div>
+
+<!-- EVOLUTION SCREEN -->
+<div id="evo-screen">
+  <img id="evo-sprite" src="" alt=""/>
+  <div id="evo-text">Evolution !</div>
+  <button class="btn yellow" onclick="closeEvo()">Continuer</button>
+</div>
+
+<!-- ══ TITLE ══ -->
+<div id="screen-title" class="screen active">
+  <div class="title-logo">
+    <div class="title-pokemon">PokéQuest</div>
+    <div class="title-sub-game">Aventure<br>Insulaire</div>
+  </div>
+  <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/249.png" style="width:140px;height:140px;image-rendering:pixelated;filter:drop-shadow(0 0 30px rgba(255,214,10,.8));animation:pokeBounce 2s ease-in-out infinite" alt="Lugia"/>
+  <div style="display:flex;flex-direction:column;gap:.7rem;align-items:center">
+    <button class="btn" onclick="showScreen('menu')">⚔ NOUVELLE PARTIE</button>
+    <button class="btn" onclick="loadGame()">📜 CONTINUER</button>
+  </div>
+</div>
+
+<!-- ══ CHARACTER CREATION ══ -->
+<div id="screen-menu" class="screen">
+  <div class="menu-panel">
+    <div class="menu-title">✦ Choisissez votre<br>Pokémon de Départ ✦</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+      <label class="input-label">Votre nom de Dresseur</label>
+      <input class="game-input" id="char-name" type="text" placeholder="Entrez votre nom..." maxlength="18"/>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+      <label class="input-label">Pokémon de départ</label>
+      <div class="class-grid" id="class-grid">
+        <div class="class-btn selected" data-class="Évoli">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png" alt="Évoli"/>
+          Évoli
+          <span class="class-type">Normal · Équilibré</span>
+        </div>
+        <div class="class-btn" data-class="Carapuce">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png" alt="Carapuce"/>
+          Carapuce
+          <span class="class-type">Eau · Défensif</span>
+        </div>
+        <div class="class-btn" data-class="Salamèche">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="Salamèche"/>
+          Salamèche
+          <span class="class-type">Feu · Offensif</span>
+        </div>
+        <div class="class-btn" data-class="Bulbizarre">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png" alt="Bulbizarre"/>
+          Bulbizarre
+          <span class="class-type">Plante · Soutien</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn" onclick="startGame()">✦ PARTIR À L'AVENTURE !</button>
+    <button class="btn red" onclick="showScreen('title')">↩ RETOUR</button>
+  </div>
+</div>
+
+<!-- ══ HUD ══ -->
+<div id="hud">
+  <div id="hud-top">
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+      <div id="player-name-hud">—</div>
+      <div style="display:flex;flex-direction:column;gap:.2rem">
+        <div class="stat-name-hud">PV</div>
+        <div class="bar-wrap"><div class="bar-fill hp" id="bar-hp" style="width:100%"></div></div>
+        <div class="stat-val" id="val-hp">100 / 100</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.2rem">
+        <div class="stat-name-hud">Attaques</div>
+        <div id="atk-uses-display" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.1rem"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.2rem">
+        <div class="stat-name-hud">XP</div>
+        <div class="bar-wrap"><div class="bar-fill xp" id="bar-xp" style="width:0%"></div></div>
+        <div class="stat-val" id="val-xp">0 / 100</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.45rem">
+      <div id="gold-display">₽ <span id="gold-val">0</span> ₽</div>
+      <div id="minimap"><canvas id="minimap-canvas" width="100" height="80"></canvas></div>
+    </div>
+  </div>
+  <div id="zone-label"></div>
+  <div id="hud-bottom">
+    <div id="message-box">Bienvenue, Dresseur…</div>
+    <div id="action-btns">
+      <button class="btn" onclick="doExplore()">⚔ EXPLORER</button>
+      <button class="btn green" onclick="doRest()">🏥 CENTRE</button>
+      <button class="btn" onclick="showMap()">🗺 CARTE</button>
+      <button class="btn yellow" onclick="showShop()">🛒 SHOP</button>
+      <button class="btn purple" onclick="showTeam()">👥 ÉQUIPE</button>
+      <button class="btn" onclick="showInventory()">🎒 SAC</button>
+      <button class="btn red" onclick="saveGame()">💾 SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BATTLE ══ -->
+<div id="screen-battle" class="screen">
+  <div id="battle-arena">
+    <div id="anim-layer"></div>
+    <div id="catch-display">
+      <div id="catch-ball-anim">⚽</div>
+      <div id="catch-result" style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--yellow);text-align:center;margin-top:.5rem"></div>
+    </div>
+    <div class="combatant" id="combatant-player">
+      <img id="player-battle-img" class="poke-display-lg" src="" alt=""/>
+      <div class="combatant-name" id="b-player-name">Héros</div>
+      <div class="combatant-level" id="b-player-level">Niv.1</div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;justify-content:center">
+        <div id="b-player-type" style="display:flex;gap:3px;align-items:center"></div>
+        <div id="b-player-spd" style="font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--yellow);margin-top:.1rem"></div>
+      </div>
+      <div class="hp-battle"><div class="hp-battle-fill" id="b-hp-player" style="width:100%"></div></div>
+      <div class="hp-text" id="b-hp-player-text">100 / 100</div>
+    </div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:.9rem;color:rgba(255,255,255,.5);text-shadow:2px 2px 0 #000">VS</div>
+    <div class="combatant" id="combatant-enemy">
+      <img id="enemy-battle-img" class="poke-display-enemy" src="" alt=""/>
+      <div class="combatant-name" id="b-enemy-name">Ennemi</div>
+      <div class="combatant-level" id="b-enemy-level">Niv.?</div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;justify-content:center">
+        <div id="b-enemy-type" style="display:flex;gap:3px;align-items:center"></div>
+        <div id="b-enemy-spd" style="font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--yellow);margin-top:.1rem"></div>
+      </div>
+      <div class="hp-battle"><div class="hp-battle-fill" id="b-hp-enemy" style="width:100%"></div></div>
+      <div class="hp-text" id="b-hp-enemy-text">100 / 100</div>
+    </div>
+  </div>
+  <div id="battle-log">Le combat commence…</div>
+  <div id="battle-turn-info" style="font-family:'Press Start 2P',monospace;font-size:.45rem;text-align:center;padding:.3rem;color:var(--green)">🟢 Votre tour !</div>
+  <div id="battle-actions">
+    <button class="btn" onclick="battleAction('attack')" id="btn-attack">⚔ ATTAQUE</button>
+    <button class="btn purple" onclick="battleAction('magic')" id="btn-magic">✨ CAPACITÉ</button>
+    <button class="btn green" onclick="battleAction('item')">🧪 POTION</button>
+    <button class="btn yellow" onclick="openCatchMenu()">⚽ CAPTURER</button>
+    <button class="btn" onclick="openSwitchMenu()" id="btn-switch" style="background:linear-gradient(180deg,#06d6a0,#048a68);box-shadow:0 4px 0 #024534">🔄 CHANGER</button>
+    <button class="btn red" onclick="battleAction('flee')">💨 FUITE</button>
+  </div>
+  <!-- catch menu (hidden by default) -->
+  <div id="catch-menu" style="display:none;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.75);align-items:center;justify-content:center">
+    <div style="background:rgba(10,10,30,.95);border:3px solid var(--yellow);border-radius:12px;padding:1.5rem;width:min(340px,92vw);display:flex;flex-direction:column;gap:.7rem">
+      <div style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--yellow);text-align:center;line-height:2">Choisir une Poké Ball</div>
+      <div id="catch-ball-list" style="display:flex;flex-direction:column;gap:.5rem"></div>
+      <button class="btn red" onclick="closeCatchMenu()">Annuler</button>
+    </div>
+  </div>
+  <!-- switch pokemon menu -->
+  <div id="switch-pokemon-menu">
+    <div style="background:rgba(10,10,30,.97);border:3px solid var(--blue);border-radius:14px;padding:1.5rem;width:min(500px,95vw);display:flex;flex-direction:column;gap:1rem">
+      <div style="font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--blue);text-align:center;line-height:2">⇄ Changer de Pokémon</div>
+      <div id="switch-poke-list" style="display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center"></div>
+      <button class="btn red" onclick="closeSwitchMenu()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INVENTORY ══ -->
+<div id="screen-inventory" class="screen">
+  <div class="inv-container">
+    <div style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--yellow);text-align:center;text-shadow:2px 2px 0 #000;margin-bottom:.5rem">🎒 SAC DU DRESSEUR</div>
+    <div class="inv-tabs">
+      <div class="inv-tab active" onclick="switchInvTab('stats')">📊 Stats</div>
+      <div class="inv-tab" onclick="switchInvTab('bag')">🎒 Sac</div>
+    </div>
+    <div id="inv-panel-stats" class="inv-content">
+      <div class="inv-panel"><h3>📊 Fiche Pokémon</h3><div id="stat-list"></div></div>
+    </div>
+    <div id="inv-panel-bag" class="inv-content" style="display:none">
+      <div class="inv-panel"><h3>🎒 Objets &amp; Équipements</h3><div id="item-grid" class="item-grid-display"></div></div>
+    </div>
+    <button class="btn" onclick="showScreen('game')" style="align-self:center;margin-top:.5rem">↩ RETOUR</button>
+  </div>
+</div>
+
+<!-- ══ TEAM ══ -->
+<div id="screen-team" class="screen">
+  <div style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--yellow);text-align:center;text-shadow:2px 2px 0 #000;margin-bottom:1rem">👥 ÉQUIPE POKÉMON</div>
+  <div class="team-grid" id="team-display"></div>
+  <button class="btn" onclick="showScreen('game')" style="margin-top:1rem">↩ RETOUR</button>
+</div>
+
+<!-- ══ MAP ══ -->
+<div id="screen-map" class="screen" style="display:none">
+  <!-- Sidebar -->
+  <div id="map-sidebar">
+    <div id="map-sidebar-header">
+      <div id="map-sidebar-title">🗺 TOWN MAP</div>
+      <div id="map-cur-zone-lbl">Position : Bourg-Palette</div>
+    </div>
+    <div id="zone-info-name">—</div>
+    <div id="zone-info-type-badge"></div>
+    <div id="zone-info-desc">Survolez une zone.</div>
+    <div id="zone-info-pokes"></div>
+    <div id="map-legend">
+      <div class="leg"><div class="leg-dot" style="background:#4cc9f0"></div>Ville</div>
+      <div class="leg"><div class="leg-dot" style="background:#2dc653"></div>Route</div>
+      <div class="leg"><div class="leg-dot" style="background:#3a86ff"></div>Eau</div>
+      <div class="leg"><div class="leg-dot" style="background:#c77dff"></div>Grotte</div>
+      <div class="leg"><div class="leg-dot" style="background:#06d6a0"></div>Forêt</div>
+      <div class="leg"><div class="leg-dot" style="background:#e63946"></div>Élite</div>
+    </div>
+    <div id="map-btns">
+      <div id="zone-kill-info" style="font-family:'Press Start 2P',monospace;font-size:.3rem;color:rgba(255,255,255,.5);text-align:center;padding:.3rem;line-height:1.8;background:rgba(0,0,0,.3);border-radius:6px;margin-bottom:.35rem;display:none"></div>
+      <button class="btn green" id="btn-travel" onclick="travelToZone()" style="display:none">🚶 SE DÉPLACER</button>
+      <button class="btn red" onclick="showScreen('game')">↩ FERMER</button>
+    </div>
+  </div>
+  <!-- Canvas map -->
+  <div id="map-canvas-wrap">
+    <canvas id="map-canvas"></canvas>
+    <div id="map-tooltip"></div>
+  </div>
+</div>
+
+<!-- ══ PRE-BATTLE TEAM SELECTOR ══ -->
+<div id="pre-battle-menu" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);align-items:center;justify-content:center;flex-direction:column;gap:1rem">
+  <div style="background:rgba(10,10,30,.97);border:3px solid var(--yellow);border-radius:14px;padding:1.5rem;width:min(520px,96vw);display:flex;flex-direction:column;gap:1rem;max-height:90vh;overflow-y:auto">
+    <div style="font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--yellow);text-align:center;line-height:2">⚡ CHOISIR VOTRE POKÉMON DE DÉPART</div>
+    <div id="pre-battle-enemy-info" style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:rgba(255,255,255,.7);text-align:center;line-height:2;background:rgba(255,255,255,.05);border-radius:8px;padding:.5rem"></div>
+    <div id="pre-battle-list" style="display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center"></div>
+    <button class="btn red" onclick="cancelPreBattle()">✗ Fuir avant le combat</button>
+  </div>
+</div>
+
+<!-- ══ POKÉMON DETAIL MENU ══ -->
+<div id="poke-detail-menu" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);align-items:center;justify-content:center">
+  <div style="background:rgba(10,10,30,.98);border:3px solid var(--blue);border-radius:14px;padding:1.4rem;width:min(580px,97vw);max-height:94vh;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem">
+    <div style="font-family:'Press Start 2P',monospace;font-size:.52rem;color:var(--blue);text-align:center;line-height:2">📊 FICHE POKÉMON &amp; ATTAQUES</div>
+    <div id="poke-detail-content"></div>
+    <button class="btn red" onclick="closePokeDetail()">✗ FERMER</button>
+  </div>
+</div>
+
+<!-- ══ SHOP ══ -->
+<div id="screen-shop" class="screen">
+  <div class="shop-panel">
+    <div class="shop-title">🛒 POKÉ MART ✦</div>
+    <div class="shop-gold">Pokédollars : ₽ <span id="shop-gold">0</span></div>
+    <div class="shop-items" id="shop-items-list"></div>
+    <button class="btn red" onclick="showScreen('game')">↩ FERMER</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+// Double types Gen 1 — id: [type1, type2]
+const DUAL_TYPES = {
+  1:'Plante/Poison', 2:'Plante/Poison', 3:'Plante/Poison',
+  6:'Feu/Vol', 12:'Insecte/Vol', 13:'Insecte/Poison', 14:'Insecte/Poison',
+  15:'Insecte/Poison', 16:'Normal/Vol', 17:'Normal/Vol', 18:'Normal/Vol',
+  21:'Normal/Vol', 22:'Normal/Vol', 29:'Poison', 30:'Poison', 31:'Poison/Sol',
+  32:'Poison', 33:'Poison', 34:'Poison/Sol', 41:'Poison/Vol', 42:'Poison/Vol',
+  43:'Plante/Poison', 44:'Plante/Poison', 45:'Plante/Poison', 46:'Insecte/Plante',
+  47:'Insecte/Plante', 48:'Insecte/Poison', 49:'Insecte/Poison', 56:'Combat',
+  57:'Combat', 60:'Eau', 61:'Eau/Psy', 62:'Eau/Combat', 66:'Combat',
+  67:'Combat', 68:'Combat', 69:'Plante/Poison', 70:'Plante/Poison', 71:'Plante/Poison',
+  72:'Eau/Poison', 73:'Eau/Poison', 79:'Eau/Psy', 80:'Eau/Psy',
+  81:'Électrik/Acier', 82:'Électrik/Acier', 83:'Normal/Vol', 84:'Normal/Vol',
+  85:'Normal/Vol', 90:'Eau', 91:'Eau/Glace', 92:'Spectre/Poison',
+  93:'Spectre/Poison', 94:'Spectre/Poison', 95:'Roche/Sol', 98:'Eau',
+  99:'Eau', 109:'Poison', 110:'Poison', 111:'Sol/Roche', 112:'Sol/Roche',
+  114:'Plante', 116:'Eau', 117:'Eau', 118:'Eau', 119:'Eau', 120:'Eau',
+  121:'Eau/Psy', 122:'Psy', 123:'Insecte/Vol', 124:'Glace/Psy',
+  127:'Insecte', 129:'Eau', 130:'Eau/Vol', 131:'Eau/Glace',
+  137:'Normal', 138:'Roche/Eau', 139:'Roche/Eau', 140:'Roche/Eau', 141:'Roche/Eau',
+  142:'Roche/Vol', 147:'Dragon', 148:'Dragon', 149:'Dragon/Vol',
+};
+
+function getPokeType(id, baseType) {
+  return DUAL_TYPES[id] || baseType;
+}
+function getPokeType1(id, baseType) {
+  const t = DUAL_TYPES[id] || baseType;
+  return t.includes('/') ? t.split('/')[0] : t;
+}
+function getPokeType2(id, baseType) {
+  const t = DUAL_TYPES[id] || baseType;
+  return t.includes('/') ? t.split('/')[1] : null;
+}
+
+const SPRITE_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+const SPRITE_FRONT = id => `${SPRITE_BASE}${id}.png`;
+const SPRITE_BACK  = id => `${SPRITE_BASE}back/${id}.png`;
+const SPRITE_SHINY = id => `${SPRITE_BASE}shiny/${id}.png`;
+
+// ── SHINY ──
+const SHINY_ODDS = 4096; // 1/4096
+function rollShiny() { return Math.floor(Math.random() * SHINY_ODDS) === 0; }
+function applyShinyBoost(poke) {
+  // +15% on atk, def, spd, magic, hp
+  const B = 1.15;
+  poke.atk   = Math.round(poke.atk   * B);
+  poke.def   = Math.round(poke.def   * B);
+  poke.spd   = Math.round(poke.spd   * B);
+  poke.magic = Math.round(poke.magic * B);
+  poke.maxHp = Math.round(poke.maxHp * B);
+  poke.hp    = poke.maxHp;
+}
+
+const CLASSES = {
+  'Évoli':     { id:133, evoId:136, evoName:'Pyroli',   evoLevel:36, sprite:133, type:'Normal',    hp:100, mp:60,  atk:14, def:11, spd:14, magic:12, move:'Morsure',      mMove:'Vive-Attaque', moveElem:'Normal',    mMoveElem:'Normal',    moveUses:6,  mMoveUses:4,  items:[{n:'Potion',img:'potion',q:2}], animType:'normal' },
+  'Carapuce':  { id:7,   evoId:8,   evoName:'Carabaffe',evoLevel:16, sprite:7,   type:'Eau',       hp:115, mp:55,  atk:11, def:18, spd:8,  magic:10, move:'Pistolet-O',   mMove:'Écume',        moveElem:'Eau',       mMoveElem:'Eau',       moveUses:6,  mMoveUses:4,  items:[{n:'Potion',img:'potion',q:2}], animType:'water' },
+  'Salamèche': { id:4,   evoId:5,   evoName:'Reptincel',evoLevel:16, sprite:4,   type:'Feu',       hp:85,  mp:65,  atk:19, def:8,  spd:16, magic:16, move:'Griffe',        mMove:'Flammèche',    moveElem:'Normal',    mMoveElem:'Feu',       moveUses:6,  mMoveUses:4,  items:[{n:'Potion',img:'potion',q:1},{n:'SuperPotion',img:'super-potion',q:1}], animType:'fire' },
+  'Bulbizarre':{ id:1,   evoId:2,   evoName:'Herbizarre',evoLevel:16,sprite:1,   type:'Plante',    hp:105, mp:80,  atk:12, def:12, spd:9,  magic:18, move:'Fouet-Liane',  mMove:'Poudre Toxik', moveElem:'Plante',    mMoveElem:'Poison',    moveUses:6,  mMoveUses:4,  items:[{n:'Potion',img:'potion',q:3}], animType:'leaf' },
+};
+
+// Evolution chains
+const EVO_CHAINS = {
+  133:{next:136,name:'Pyroli',level:36},
+  136:{next:197,name:'Noctali',level:50},
+  7:{next:8,name:'Carabaffe',level:16},
+  8:{next:9,name:'Tortank',level:36},
+  4:{next:5,name:'Reptincel',level:16},
+  5:{next:6,name:'Dracaufeu',level:36},
+  1:{next:2,name:'Herbizarre',level:16},
+  2:{next:3,name:'Florizarre',level:32},
+};
+
+const ENEMIES = [
+  { name:'Rattata', id:19,  hp:35,  atk:7,  def:2, xp:18,  gold:10, type:'Normal' },
+  { name:'Tentacool',id:72, hp:40,  atk:9,  def:3, xp:22,  gold:14, type:'Eau'    },
+  { name:'Magnéti', id:81,  hp:50,  atk:12, def:5, xp:30,  gold:20, type:'Électrik'},
+  { name:'Dracolosse',id:149,hp:95, atk:22, def:9, xp:65,  gold:55, type:'Dragon' },
+  { name:'Mentali', id:96,  hp:45,  atk:10, def:4, xp:25,  gold:18, type:'Psy'    },
+  { name:'Lokhlass',id:131, hp:70,  atk:15, def:8, xp:42,  gold:35, type:'Eau'    },
+  { name:'Salameche',id:4,  hp:30,  atk:6,  def:3, xp:15,  gold:8,  type:'Feu'    },
+  { name:'Pikachu', id:25,  hp:38,  atk:9,  def:3, xp:20,  gold:12, type:'Électrik'},
+  { name:'Psykokwak',id:54, hp:45,  atk:8,  def:4, xp:23,  gold:16, type:'Eau'    },
+  { name:'Goupix',  id:37,  hp:38,  atk:8,  def:3, xp:18,  gold:11, type:'Feu'    },
+];
+
+const EVENTS = [
+  "Vous longez la plage… des empreintes de Pokémon mènent vers la mer.",
+  "Un vieux Professeur Pokémon vous offre un Pokédex abîmé mais fonctionnel !",
+  "Un Ronflex bloque le chemin et ronfle bruyamment. Il faut contourner.",
+  "Vous trouvez une CT mystérieuse à moitié enfouie dans le sable.",
+  "Une lumière bleue pulse au large… un Pokémon Légendaire ?",
+  "Des ruines anciennes émergent des eaux peu profondes. Des hiéroglyphes Pokémon !",
+  "Une Lougaroc hurle à la lune depuis la falaise voisine.",
+  "Un Hypocéan semble vous observer depuis les profondeurs translucides.",
+];
+
+const SHOP_ITEMS = [
+  { id:'pokeball',     name:'Poké Ball',    desc:'Taux de capture: 1×',    price:200,  catchRate:1,    img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png',    type:'ball' },
+  { id:'superball',    name:'Super Ball',   desc:'Taux de capture: 1.5×',  price:600,  catchRate:1.5,  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png',  type:'ball' },
+  { id:'hyperball',    name:'Hyper Ball',   desc:'Taux de capture: 2×',    price:1200, catchRate:2,    img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png',  type:'ball' },
+  { id:'masterball',   name:'Master Ball',  desc:'Capture garantie !',     price:10000,catchRate:999,  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png', type:'ball' },
+  { id:'potion',       name:'Potion',       desc:'Restaure 30 PV',         price:300,  heal:30,        img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png',     type:'heal' },
+  { id:'superpotion',  name:'Super Potion', desc:'Restaure 60 PV',         price:700,  heal:60,        img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/super-potion.png',type:'heal' },
+  { id:'hyperpotion',  name:'Hyper Potion', desc:'Restaure 120 PV',        price:1200, heal:120,       img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/hyper-potion.png',type:'heal' },
+];
+
+const ITEM_DISPLAY = {
+  potion:      { name:'Potion',       img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png' },
+  superpotion: { name:'Super Potion', img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/super-potion.png' },
+  hyperpotion: { name:'Hyper Potion', img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/hyper-potion.png' },
+  pokeball:    { name:'Poké Ball',    img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png' },
+  superball:   { name:'Super Ball',   img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png' },
+  hyperball:   { name:'Hyper Ball',   img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png' },
+  masterball:  { name:'Master Ball',  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png' },
+  ct:          { name:'CT Mystère',   img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png' },
+};
+
+// ══════════════════════════════════════════
+// BASE DE DONNÉES DES ATTAQUES (Gen 1 complète + extras)
+// cat: 'phy'=Physique, 'spe'=Spéciale, 'sta'=Statut
+// ══════════════════════════════════════════
+const MOVES_DB = {
+  // ── Normal ──
+  'Charge'         :{type:'Normal',   cat:'phy', pow:40,  acc:100, pp:35, desc:'Attaque normale de base.'},
+  'Morsure'        :{type:'Normal',   cat:'phy', pow:60,  acc:100, pp:25, desc:'Mord l\'adversaire. Peut faire reculer.'},
+  'Coup d\'Suif'   :{type:'Normal',   cat:'phy', pow:35,  acc:85,  pp:10, desc:'Charge sauvage. Peut rater.'},
+  'Tranche'        :{type:'Normal',   cat:'phy', pow:70,  acc:100, pp:20, desc:'Taux de critique élevé.'},
+  'Jackpot'        :{type:'Normal',   cat:'phy', pow:18,  acc:100, pp:10, desc:'Frappe 2 à 5 fois.'},
+  'Griffe'         :{type:'Normal',   cat:'phy', pow:40,  acc:100, pp:35, desc:'Griffe l\'ennemi.'},
+  'Coup d\'Boule'  :{type:'Normal',   cat:'phy', pow:70,  acc:100, pp:15, desc:'Choc frontal puissant.'},
+  'Koud\'Korne'    :{type:'Normal',   cat:'phy', pow:65,  acc:100, pp:25, desc:'Frappe avec des cornes.'},
+  'Écrasement'     :{type:'Normal',   cat:'phy', pow:65,  acc:100, pp:20, desc:'Peut faire baisser la Défense.'},
+  'Ultimapoing'    :{type:'Normal',   cat:'phy', pow:80,  acc:100, pp:5,  desc:'Peut infliger n\'importe quel statut.'},
+  'Vive-Attaque'   :{type:'Normal',   cat:'phy', pow:40,  acc:100, pp:30, desc:'Toujours en premier.'},
+  'Rugissement'    :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:40, desc:'Baisse l\'Attaque de l\'ennemi.'},
+  'Rugissement de Guerre':{type:'Normal',cat:'sta',pow:0, acc:100, pp:20, desc:'Monte l\'Attaque du lanceur.'},
+  'Méga-Sangsue'   :{type:'Normal',   cat:'spe', pow:20,  acc:100, pp:10, desc:'Absorbe 1/2 des dégâts infligés.'},
+  'Berceuse'       :{type:'Normal',   cat:'sta', pow:0,   acc:55,  pp:15, desc:'Endort l\'adversaire.'},
+  'Cyclone'        :{type:'Normal',   cat:'spe', pow:40,  acc:85,  pp:20, desc:'Tempête d\'air.'},
+  'Coupe'          :{type:'Normal',   cat:'phy', pow:50,  acc:95,  pp:30, desc:'Taux de critique élevé. HM01.'},
+  'Force'          :{type:'Normal',   cat:'phy', pow:80,  acc:100, pp:15, desc:'Frappe puissante. HM04.'},
+  'Éclate-Roc'     :{type:'Normal',   cat:'phy', pow:40,  acc:100, pp:15, desc:'HM06. Réduit la Défense.'},
+  'Double-Pied'    :{type:'Normal',   cat:'phy', pow:30,  acc:100, pp:30, desc:'Frappe 2 fois.'},
+  'Grobisou'       :{type:'Normal',   cat:'sta', pow:0,   acc:75,  pp:20, desc:'Peut paralyser ou endormir.'},
+  'Metronome'      :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:10, desc:'Utilise une attaque aléatoire.'},
+  'Bomb-Oeuf'      :{type:'Normal',   cat:'phy', pow:100, acc:75,  pp:10, desc:'Très puissant mais peu précis.'},
+  'Damoclès'       :{type:'Normal',   cat:'phy', pow:120, acc:100, pp:10, desc:'L\'utilisateur perd 1/2 de ses PV.'},
+  'Explosion'      :{type:'Normal',   cat:'phy', pow:250, acc:100, pp:5,  desc:'L\'utilisateur s\'évanouit.'},
+  'Amnésie'        :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:20, desc:'Monte massivement la Défense Spéciale.'},
+  'Triplé-Pied'    :{type:'Normal',   cat:'phy', pow:10,  acc:90,  pp:10, desc:'Frappe 3 fois, puissance croissante.'},
+  'Tranche-Nuit'   :{type:'Normal',   cat:'phy', pow:70,  acc:100, pp:15, desc:'Taux de critique élevé.'},
+  // ── Feu ──
+  'Flammèche'      :{type:'Feu',      cat:'spe', pow:40,  acc:100, pp:25, desc:'Peut brûler l\'ennemi.'},
+  'Lance-Flammes'  :{type:'Feu',      cat:'spe', pow:90,  acc:100, pp:15, desc:'Peut brûler. CT38.'},
+  'Déflagration'   :{type:'Feu',      cat:'spe', pow:110, acc:85,  pp:5,  desc:'Très puissant. Peut brûler. CT38.'},
+  'Jet de Feu'     :{type:'Feu',      cat:'spe', pow:95,  acc:100, pp:15, desc:'Puissant. Peut brûler.'},
+  'Roue de Feu'    :{type:'Feu',      cat:'spe', pow:60,  acc:100, pp:25, desc:'Peut brûler.'},
+  'Feu Follet'     :{type:'Feu',      cat:'sta', pow:0,   acc:85,  pp:15, desc:'Brûle l\'adversaire.'},
+  'Plénitude'      :{type:'Feu',      cat:'sta', pow:0,   acc:100, pp:5,  desc:'Restaure les PV du lanceur.'},
+  // ── Eau ──
+  'Pistolet-O'     :{type:'Eau',      cat:'spe', pow:40,  acc:100, pp:25, desc:'Jet d\'eau basique.'},
+  'Écume'          :{type:'Eau',      cat:'spe', pow:20,  acc:100, pp:30, desc:'Peut baisser la Vitesse ennemi.'},
+  'Hydrocanon'     :{type:'Eau',      cat:'spe', pow:110, acc:80,  pp:5,  desc:'Attaque d\'eau maximale. CT12.'},
+  'Surf'           :{type:'Eau',      cat:'spe', pow:90,  acc:100, pp:15, desc:'HM03. Frappe tous les ennemis.'},
+  'Cascade'        :{type:'Eau',      cat:'phy', pow:80,  acc:100, pp:15, desc:'HM07. Peut faire reculer.'},
+  'Bulles d\'O'    :{type:'Eau',      cat:'spe', pow:65,  acc:100, pp:20, desc:'Peut baisser la Vitesse ennemi.'},
+  'Jackbulles'     :{type:'Eau',      cat:'spe', pow:25,  acc:100, pp:30, desc:'Frappe 2 à 5 fois.'},
+  'Aqua-Jet'       :{type:'Eau',      cat:'phy', pow:40,  acc:100, pp:20, desc:'Toujours en premier.'},
+  'Nappe-O'        :{type:'Eau',      cat:'spe', pow:60,  acc:100, pp:20, desc:'Peut baisser la Défense.'},
+  'Blizzard'       :{type:'Glace',    cat:'spe', pow:110, acc:70,  pp:5,  desc:'Peut geler. CT14.'},
+  // ── Plante ──
+  'Fouet-Liane'    :{type:'Plante',   cat:'phy', pow:45,  acc:100, pp:25, desc:'Frappe avec des lianes.'},
+  'Tranch\'Herbe'  :{type:'Plante',   cat:'phy', pow:55,  acc:95,  pp:25, desc:'Taux de critique élevé.'},
+  'Lance-Soleil'   :{type:'Plante',   cat:'spe', pow:120, acc:100, pp:10, desc:'Charge 1 tour, frappe le 2e.'},
+  'Végé-Attak'     :{type:'Plante',   cat:'spe', pow:65,  acc:100, pp:20, desc:'Peut paralyser.'},
+  'Méga-Drain'     :{type:'Plante',   cat:'spe', pow:40,  acc:100, pp:15, desc:'Absorbe des PV. CT21.'},
+  'Poudre Toxik'   :{type:'Poison',   cat:'sta', pow:0,   acc:75,  pp:35, desc:'Empoisonne l\'adversaire.'},
+  'Spore'          :{type:'Plante',   cat:'sta', pow:0,   acc:100, pp:15, desc:'Endort l\'adversaire. 100% précis.'},
+  // ── Électrik ──
+  'Tonnerre'       :{type:'Électrik', cat:'spe', pow:90,  acc:100, pp:15, desc:'Peut paralyser. CT24.'},
+  'Foudre'         :{type:'Électrik', cat:'spe', pow:110, acc:70,  pp:10, desc:'Peut paralyser. CT25.'},
+  'Cage-Éclair'    :{type:'Électrik', cat:'spe', pow:40,  acc:100, pp:30, desc:'Paralyse l\'adversaire.'},
+  'Éclair'         :{type:'Électrik', cat:'sta', pow:0,   acc:100, pp:20, desc:'Paralyse toujours.'},
+  'Champ-Élec'     :{type:'Électrik', cat:'sta', pow:0,   acc:100, pp:10, desc:'Booste les att. Élec.'},
+  // ── Psy ──
+  'Psyko'          :{type:'Psy',      cat:'spe', pow:90,  acc:100, pp:10, desc:'Peut baisser la Défense Spé. CT29.'},
+  'Télékinésie'    :{type:'Psy',      cat:'spe', pow:50,  acc:100, pp:25, desc:'Peut faire baisser la Défense Spé.'},
+  'Hypnose'        :{type:'Psy',      cat:'sta', pow:0,   acc:60,  pp:20, desc:'Endort l\'adversaire.'},
+  'Regard Médusant':{type:'Psy',      cat:'sta', pow:0,   acc:100, pp:30, desc:'Paralyse l\'adversaire.'},
+  'Détection'      :{type:'Psy',      cat:'sta', pow:0,   acc:100, pp:5,  desc:'Esquive toute attaque.'},
+  'Amnesie'        :{type:'Psy',      cat:'sta', pow:0,   acc:100, pp:20, desc:'Monte fortement la Défense Spé.'},
+  'Rayon Récup'    :{type:'Psy',      cat:'sta', pow:0,   acc:100, pp:20, desc:'Soigne un allié.'},
+  // ── Glace ──
+  'Blizzard2'      :{type:'Glace',    cat:'spe', pow:110, acc:70,  pp:5,  desc:'Peut geler.'},
+  'Vent Glace'     :{type:'Glace',    cat:'spe', pow:55,  acc:95,  pp:15, desc:'Baisse la Vitesse ennemi.'},
+  'Laser Glace'    :{type:'Glace',    cat:'spe', pow:90,  acc:100, pp:10, desc:'Peut geler. CT13.'},
+  'Jackfrost'      :{type:'Glace',    cat:'spe', pow:40,  acc:100, pp:30, desc:'Peut geler.'},
+  'Avalanche'      :{type:'Glace',    cat:'phy', pow:60,  acc:100, pp:10, desc:'Double si touché ce tour.'},
+  // ── Combat ──
+  'Poing de Feu'   :{type:'Combat',   cat:'phy', pow:75,  acc:100, pp:15, desc:'Peut brûler.'},
+  'Coup de Boule'  :{type:'Combat',   cat:'phy', pow:70,  acc:100, pp:15, desc:'Frappe la tête.'},
+  'Uppercut'       :{type:'Combat',   cat:'phy', pow:70,  acc:100, pp:15, desc:'Peut faire reculer.'},
+  'Frappe Atlas'   :{type:'Combat',   cat:'phy', pow:80,  acc:100, pp:5,  desc:'Recharge au tour suivant.'},
+  'Soumission'     :{type:'Combat',   cat:'phy', pow:80,  acc:80,  pp:20, desc:'Utilisateur perd 1/4 des dégâts.'},
+  'Pied Karaté'    :{type:'Combat',   cat:'phy', pow:50,  acc:90,  pp:10, desc:'Toujours critique.'},
+  'Mégaphone'      :{type:'Combat',   cat:'sta', pow:0,   acc:100, pp:10, desc:'Monte fortement l\'Attaque.'},
+  'Close Combat'   :{type:'Combat',   cat:'phy', pow:120, acc:100, pp:5,  desc:'Baisse Déf et Déf Spé.'},
+  // ── Poison ──
+  'Dard-Venin'     :{type:'Poison',   cat:'phy', pow:15,  acc:100, pp:35, desc:'Peut empoisonner.'},
+  'Smog'           :{type:'Poison',   cat:'spe', pow:30,  acc:70,  pp:20, desc:'Peut empoisonner.'},
+  'Souplesse'      :{type:'Poison',   cat:'phy', pow:80,  acc:100, pp:20, desc:'Toujours frappe l\'adversaire.'},
+  'Toxik'          :{type:'Poison',   cat:'sta', pow:0,   acc:90,  pp:10, desc:'Empoisonnement sévère. CT06.'},
+  'Acide'          :{type:'Poison',   cat:'spe', pow:40,  acc:100, pp:30, desc:'Peut baisser la Défense Spé.'},
+  // ── Sol ──
+  'Séisme'         :{type:'Sol',      cat:'phy', pow:100, acc:100, pp:10, desc:'Frappe tout le monde. CT26.'},
+  'Tremblement'    :{type:'Sol',      cat:'phy', pow:60,  acc:100, pp:20, desc:'Frappe les proies enracinées.'},
+  'Digger'         :{type:'Sol',      cat:'phy', pow:80,  acc:100, pp:10, desc:'Se cache, frappe au tour suivant.'},
+  'Sablé-Tempête'  :{type:'Sol',      cat:'spe', pow:60,  acc:70,  pp:10, desc:'Baisse la précision.'},
+  // ── Roche ──
+  'Éboulement'     :{type:'Roche',    cat:'phy', pow:75,  acc:90,  pp:10, desc:'Peut faire reculer.'},
+  'Lancer-Rocher'  :{type:'Roche',    cat:'phy', pow:50,  acc:90,  pp:15, desc:'Peut faire reculer.'},
+  'Tête de Roc'    :{type:'Roche',    cat:'phy', pow:100, acc:80,  pp:5,  desc:'Très puissant.'},
+  'Joyau de Pierre':{type:'Roche',    cat:'phy', pow:60,  acc:95,  pp:15, desc:'Peut baisser la Défense Spé.'},
+  // ── Spectre ──
+  'Lèche-Langue'   :{type:'Spectre',  cat:'phy', pow:30,  acc:100, pp:30, desc:'Peut paralyser.'},
+  'Ball\'Ombre'    :{type:'Spectre',  cat:'spe', pow:80,  acc:100, pp:15, desc:'Peut baisser la Défense Spé.'},
+  'Malédiction'    :{type:'Spectre',  cat:'sta', pow:0,   acc:100, pp:10, desc:'Spectre: inflige dégâts/tour.'},
+  // ── Dragon ──
+  'Drakkarion'     :{type:'Dragon',   cat:'spe', pow:60,  acc:100, pp:20, desc:'Peut paralyser.'},
+  'Comète Poing'   :{type:'Dragon',   cat:'phy', pow:100, acc:50,  pp:5,  desc:'Très puissant mais peu précis.'},
+  'Draco-Météore'  :{type:'Dragon',   cat:'spe', pow:130, acc:90,  pp:5,  desc:'Baisse l\'Attaque Spé.'},
+  'Colère'         :{type:'Dragon',   cat:'spe', pow:120, acc:100, pp:10, desc:'Recharge le tour suivant.'},
+  // ── Vol ──
+  'Tranche-Aile'   :{type:'Vol',      cat:'phy', pow:60,  acc:100, pp:35, desc:'Toujours en premier.'},
+  'Tornade'        :{type:'Vol',      cat:'spe', pow:40,  acc:70,  pp:35, desc:'Peut faire reculer.'},
+  'Aéropique'      :{type:'Vol',      cat:'phy', pow:80,  acc:100, pp:15, desc:'CT19. Toujours en premier.'},
+  'Envol'          :{type:'Vol',      cat:'phy', pow:90,  acc:95,  pp:15, desc:'S\'envole, frappe au tour suivant.'},
+  'Danse-Plume'    :{type:'Vol',      cat:'sta', pow:0,   acc:100, pp:15, desc:'Baisse l\'Attaque ennemi.'},
+  // ── Insecte ──
+  'Coupe-Vent'     :{type:'Insecte',  cat:'spe', pow:60,  acc:100, pp:25, desc:'Taux de critique élevé.'},
+  'Dard-Nuée'      :{type:'Insecte',  cat:'phy', pow:25,  acc:100, pp:30, desc:'Frappe 2 à 5 fois.'},
+  'Vibraqua'       :{type:'Insecte',  cat:'spe', pow:90,  acc:100, pp:10, desc:'Peut paralyser.'},
+  'Piqûre'         :{type:'Insecte',  cat:'phy', pow:45,  acc:100, pp:20, desc:'Peut baisser Déf Spé.'},
+  // ── Acier ──
+  'Tranche-Métal'  :{type:'Acier',    cat:'phy', pow:80,  acc:100, pp:15, desc:'Taux de critique élevé.'},
+  'Coup d\'Acier'  :{type:'Acier',    cat:'phy', pow:50,  acc:100, pp:40, desc:'Monte la Défense.'},
+  'Météores'       :{type:'Acier',    cat:'phy', pow:90,  acc:100, pp:10, desc:'Toujours critique.'},
+  // ── Ténèbres ──
+  'Mâchouille'     :{type:'Ténèbres', cat:'phy', pow:60,  acc:100, pp:25, desc:'Peut baisser la Défense Spé.'},
+  'Jackpot Nuit'   :{type:'Ténèbres', cat:'phy', pow:60,  acc:100, pp:20, desc:'Peut faire reculer.'},
+  'Faux Chage'     :{type:'Ténèbres', cat:'phy', pow:40,  acc:100, pp:40, desc:'Laisse 1 PV à l\'ennemi.'},
+  'Tranche Nuit'   :{type:'Ténèbres', cat:'phy', pow:70,  acc:100, pp:15, desc:'Taux de critique élevé.'},
+  // ── Fée ──
+  'Éclat Magique'  :{type:'Fée',      cat:'spe', pow:80,  acc:100, pp:10, desc:'Peut modifier les stats.'},
+  'Lumière Lune'   :{type:'Fée',      cat:'sta', pow:0,   acc:100, pp:5,  desc:'Restaure les PV.'},
+  // ── Statut généraux ──
+  'Hâte'           :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:30, desc:'Double la Vitesse.'},
+  'Abri'           :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:10, desc:'Réduit les dégâts reçus.'},
+  'Armure'         :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:30, desc:'Monte la Défense.'},
+  'Trempette'      :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:20, desc:'Monte l\'Attaque et la Défense.'},
+  'Danse Lame'     :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:20, desc:'Monte fortement l\'Attaque.'},
+  'Jackpot Soin'   :{type:'Normal',   cat:'sta', pow:0,   acc:100, pp:10, desc:'Restaure les PV du lanceur.'},
+};
+
+// ══════════════════════════════════════════
+// CTs (Capsules Techniques) disponibles
+// ══════════════════════════════════════════
+const CT_LIST = [
+  { id:'ct01', name:'CT01 – Tranche',        move:'Tranche',         price:800,  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png'   },
+  { id:'ct06', name:'CT06 – Toxik',           move:'Toxik',           price:900,  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-poison.png'  },
+  { id:'ct10', name:'CT10 – Jackpot',         move:'Jackpot',         price:700,  img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png'  },
+  { id:'ct12', name:'CT12 – Hydrocanon',      move:'Hydrocanon',      price:2000, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-water.png'   },
+  { id:'ct13', name:'CT13 – Laser Glace',     move:'Laser Glace',     price:1800, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-ice.png'    },
+  { id:'ct14', name:'CT14 – Blizzard',        move:'Blizzard',        price:2200, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-ice.png'    },
+  { id:'ct15', name:'CT15 – Damoclès',        move:'Damoclès',        price:3000, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png'  },
+  { id:'ct19', name:'CT19 – Aéropique',       move:'Aéropique',       price:1200, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-flying.png' },
+  { id:'ct21', name:'CT21 – Méga-Drain',      move:'Méga-Drain',      price:1400, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-grass.png'  },
+  { id:'ct24', name:'CT24 – Tonnerre',        move:'Tonnerre',        price:1600, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-electric.png'},
+  { id:'ct25', name:'CT25 – Foudre',          move:'Foudre',          price:2400, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-electric.png'},
+  { id:'ct26', name:'CT26 – Séisme',          move:'Séisme',          price:2000, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-ground.png' },
+  { id:'ct29', name:'CT29 – Psyko',           move:'Psyko',           price:1800, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-psychic.png'},
+  { id:'ct38', name:'CT38 – Lance-Flammes',   move:'Lance-Flammes',   price:1800, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-fire.png'   },
+  { id:'ct50', name:'CT50 – Déflagration',    move:'Déflagration',    price:2800, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-fire.png'   },
+  { id:'ct51', name:'CT51 – Close Combat',    move:'Close Combat',    price:2500, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-fighting.png'},
+  { id:'ct52', name:'CT52 – Draco-Météore',   move:'Draco-Météore',   price:3500, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-dragon.png' },
+  { id:'ct53', name:'CT53 – Ball\'Ombre',     move:'Ball\'Ombre',     price:1600, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-ghost.png'  },
+  { id:'ct54', name:'CT54 – Danse Lame',      move:'Danse Lame',      price:1200, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png'  },
+  { id:'ct55', name:'CT55 – Surf',            move:'Surf',            price:2000, img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-water.png'  },
+];
+
+// ══════════════════════════════════════════
+// ATTAQUES APPRISES PAR NIVEAU (par type de pokémon)
+// ══════════════════════════════════════════
+const LEVEL_UP_MOVES = {
+  // Évoli / évolutions
+  'Normal': [
+    {lv:1,  move:'Charge'},{lv:5,  move:'Rugissement'},{lv:9,  move:'Morsure'},
+    {lv:13, move:'Vive-Attaque'},{lv:17, move:'Rugissement de Guerre'},
+    {lv:21, move:'Tranche'},{lv:25, move:'Coup d\'Boule'},{lv:29, move:'Damoclès'},
+    {lv:33, move:'Explosion'},{lv:40, move:'Tranche-Nuit'},
+  ],
+  'Feu': [
+    {lv:1,  move:'Griffe'},{lv:5,  move:'Flammèche'},{lv:9,  move:'Rugissement'},
+    {lv:13, move:'Lance-Flammes'},{lv:17, move:'Danse Lame'},
+    {lv:21, move:'Roue de Feu'},{lv:25, move:'Jet de Feu'},{lv:30, move:'Déflagration'},
+    {lv:36, move:'Feu Follet'},{lv:42, move:'Damoclès'},
+  ],
+  'Eau': [
+    {lv:1,  move:'Pistolet-O'},{lv:5,  move:'Écume'},{lv:9,  move:'Rugissement'},
+    {lv:13, move:'Bulles d\'O'},{lv:17, move:'Surf'},{lv:21, move:'Hydrocanon'},
+    {lv:25, move:'Aqua-Jet'},{lv:30, move:'Cascade'},{lv:36, move:'Blizzard'},
+  ],
+  'Plante': [
+    {lv:1,  move:'Fouet-Liane'},{lv:5,  move:'Rugissement'},{lv:9,  move:'Poudre Toxik'},
+    {lv:13, move:'Végé-Attak'},{lv:17, move:'Tranch\'Herbe'},
+    {lv:21, move:'Méga-Drain'},{lv:25, move:'Spore'},{lv:30, move:'Lance-Soleil'},
+  ],
+  'Électrik': [
+    {lv:1,  move:'Cage-Éclair'},{lv:5,  move:'Éclair'},{lv:9,  move:'Rugissement de Guerre'},
+    {lv:13, move:'Tonnerre'},{lv:17, move:'Hâte'},{lv:21, move:'Foudre'},
+    {lv:28, move:'Champ-Élec'},
+  ],
+  'Psy': [
+    {lv:1,  move:'Télékinésie'},{lv:5,  move:'Hypnose'},{lv:9,  move:'Regard Médusant'},
+    {lv:13, move:'Psyko'},{lv:17, move:'Amnesie'},{lv:21, move:'Détection'},
+    {lv:28, move:'Rayon Récup'},
+  ],
+  'Dragon': [
+    {lv:1,  move:'Drakkarion'},{lv:7,  move:'Rugissement de Guerre'},{lv:14, move:'Colère'},
+    {lv:21, move:'Hâte'},{lv:28, move:'Comète Poing'},{lv:35, move:'Draco-Météore'},
+  ],
+  'Vol': [
+    {lv:1,  move:'Tornade'},{lv:5,  move:'Tranche-Aile'},{lv:9,  move:'Rugissement'},
+    {lv:13, move:'Aéropique'},{lv:17, move:'Danse-Plume'},{lv:21, move:'Envol'},
+  ],
+  'Roche': [
+    {lv:1,  move:'Lancer-Rocher'},{lv:6,  move:'Armure'},{lv:11, move:'Éboulement'},
+    {lv:16, move:'Tête de Roc'},{lv:22, move:'Séisme'},
+  ],
+  'Sol': [
+    {lv:1,  move:'Séisme'},{lv:5,  move:'Sablé-Tempête'},{lv:10, move:'Tremblement'},
+    {lv:15, move:'Digger'},{lv:22, move:'Éclate-Roc'},
+  ],
+  'Spectre': [
+    {lv:1,  move:'Lèche-Langue'},{lv:5,  move:'Malédiction'},{lv:9,  move:'Hypnose'},
+    {lv:13, move:'Ball\'Ombre'},{lv:19, move:'Psyko'},
+  ],
+  'Poison': [
+    {lv:1,  move:'Dard-Venin'},{lv:5,  move:'Acide'},{lv:9,  move:'Poudre Toxik'},
+    {lv:13, move:'Toxik'},{lv:17, move:'Smog'},{lv:22, move:'Souplesse'},
+  ],
+  'Combat': [
+    {lv:1,  move:'Pied Karaté'},{lv:5,  move:'Mégaphone'},{lv:9,  move:'Uppercut'},
+    {lv:13, move:'Frappe Atlas'},{lv:17, move:'Soumission'},{lv:22, move:'Close Combat'},
+  ],
+  'Insecte': [
+    {lv:1,  move:'Dard-Nuée'},{lv:5,  move:'Piqûre'},{lv:9,  move:'Coupe-Vent'},
+    {lv:14, move:'Vibraqua'},
+  ],
+  'Glace': [
+    {lv:1,  move:'Jackfrost'},{lv:5,  move:'Vent Glace'},{lv:10, move:'Laser Glace'},
+    {lv:15, move:'Avalanche'},{lv:21, move:'Blizzard'},
+  ],
+  'Acier': [
+    {lv:1,  move:'Coup d\'Acier'},{lv:6,  move:'Tranche-Métal'},{lv:12, move:'Météores'},
+  ],
+  'Ténèbres': [
+    {lv:1,  move:'Mâchouille'},{lv:5,  move:'Jackpot Nuit'},{lv:9,  move:'Faux Chage'},
+    {lv:14, move:'Tranche Nuit'},
+  ],
+  'Fée': [
+    {lv:1,  move:'Éclat Magique'},{lv:7,  move:'Lumière Lune'},{lv:13, move:'Rugissement'},
+  ],
+};
+
+// Attaques apprises au niveau actuel (retourne move si disponible, sinon null)
+function getLearnableMoves(poke) {
+  const type = poke.type || 'Normal';
+  const lvlMoves = LEVEL_UP_MOVES[type] || LEVEL_UP_MOVES['Normal'];
+  return lvlMoves.filter(m => m.lv <= poke.level && MOVES_DB[m.move]);
+}
+
+// Ajoute une CT à l'inventaire CT du joueur
+function addCTToInventory(ctId) {
+  if (!player.ctBag) player.ctBag = {};
+  player.ctBag[ctId] = (player.ctBag[ctId] || 0) + 1;
+}
+
+// ══════════════════════════════════════════
+// MENU DÉTAIL POKÉMON
+// ══════════════════════════════════════════
+let detailPokeIdx = null;
+let detailSlot = null; // 'move1' | 'move2' | null
+
+function openPokeDetail(rosterIdx) {
+  if (!player || !player.roster) return;
+  detailPokeIdx = rosterIdx;
+  detailSlot = null;
+  renderPokeDetail();
+  document.getElementById('poke-detail-menu').style.display = 'flex';
+}
+
+function closePokeDetail() {
+  document.getElementById('poke-detail-menu').style.display = 'none';
+  detailPokeIdx = null;
+  detailSlot = null;
+}
+
+function renderPokeDetail() {
+  const p = player.roster[detailPokeIdx];
+  if (!p) return;
+  const el = document.getElementById('poke-detail-content');
+  const spriteId = p.currentSpriteId || p.spriteId;
+  const imgSrc = p.isShiny ? SPRITE_SHINY(spriteId) : SPRITE_FRONT(spriteId);
+  const hpPct = Math.max(0, Math.round((p.hp / p.maxHp) * 100));
+  const xpPct = p.xpNext ? Math.round(((p.xp||0) / p.xpNext) * 100) : 0;
+
+  // Attaques actuelles
+  const m1 = MOVES_DB[p.move] || { type: p.moveElem||p.type, cat:'phy', pow:'—', acc:'—', pp:'—', desc: p.move };
+  const m2 = MOVES_DB[p.mMove] || { type: p.mMoveElem||p.type, cat:'spe', pow:'—', acc:'—', pp:'—', desc: p.mMove };
+
+  // Attaques apprises par niveau (disponibles mais pas encore équipées)
+  const learnable = getLearnableMoves(p).filter(lm => lm.move !== p.move && lm.move !== p.mMove);
+  // CTs utilisables
+  const ctMoves = player.ctBag ? Object.entries(player.ctBag)
+    .filter(([id, qty]) => qty > 0)
+    .map(([id]) => CT_LIST.find(c => c.id === id))
+    .filter(Boolean)
+    .filter(ct => ct.move !== p.move && ct.move !== p.mMove) : [];
+
+  const typeColor = tp => ({ Feu:'#ff6030',Eau:'#4488ff',Plante:'#44bb44',Électrik:'#ffcc00',Normal:'#9999aa',Psy:'#ff4499',Vol:'#88aaee',Dragon:'#7038f8',Poison:'#aa44bb',Combat:'#994422',Glace:'#88ccff',Sol:'#cc9944',Roche:'#9a8080',Spectre:'#5544aa',Insecte:'#88aa22',Acier:'#aaaacc',Ténèbres:'#443344',Fée:'#ff88cc' }[tp] || '#666');
+  const catIcon = cat => cat === 'phy' ? '⚔️' : cat === 'spe' ? '✨' : '🔧';
+
+  const moveCard = (move, moveData, slot, uses, usesMax) => `
+    <div class="pd-move-card ${detailSlot===slot?'selected':''}" onclick="selectMoveSlot('${slot}')">
+      <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
+        <span style="font-size:.9rem">${catIcon(moveData.cat)}</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:.38rem;color:#fff">${move}</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:.3rem;padding:.1rem .4rem;border-radius:4px;background:${typeColor(moveData.type)};color:#fff">${moveData.type}</span>
+      </div>
+      <div style="font-size:.65rem;color:rgba(255,255,255,.5)">Puissance: ${moveData.pow} · Précision: ${moveData.acc}% · PP: ${uses}/${usesMax||moveData.pp}</div>
+      <div style="font-size:.6rem;color:rgba(255,255,255,.4);margin-top:.1rem">${moveData.desc}</div>
+      ${detailSlot===slot ? '<div style="font-size:.5rem;color:var(--yellow);margin-top:.2rem">▼ Choisir un remplacement ci-dessous</div>' : ''}
+    </div>`;
+
+  const moveOption = (moveName, source, ctId) => {
+    const md = MOVES_DB[moveName];
+    if (!md) return '';
+    return `<div class="pd-learn-card" onclick="equipMove('${moveName}', '${ctId||''}')">
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <span>${catIcon(md.cat)}</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--yellow)">${moveName}</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:.28rem;padding:.1rem .35rem;border-radius:3px;background:${typeColor(md.type)};color:#fff">${md.type}</span>
+        <span style="font-size:.55rem;color:rgba(255,255,255,.4)">${source}</span>
+      </div>
+      <div style="font-size:.6rem;color:rgba(255,255,255,.45)">Puis: ${md.pow} · Préc: ${md.acc}% · PP: ${md.pp} · ${md.desc}</div>
+    </div>`;
+  };
+
+  const learnSection = (detailSlot && (learnable.length > 0 || ctMoves.length > 0)) ? `
+    <div style="margin-top:.6rem;font-family:'Press Start 2P',monospace;font-size:.42rem;color:var(--blue)">📚 Attaques disponibles (→ remplace ${detailSlot==='move1'?p.move:p.mMove})</div>
+    <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.3rem;max-height:180px;overflow-y:auto">
+      ${learnable.map(lm => moveOption(lm.move, `Niv.${lm.lv}`, null)).join('')}
+      ${ctMoves.map(ct => moveOption(ct.move, ct.name, ct.id)).join('')}
+      ${learnable.length===0 && ctMoves.length===0 ? '<div style="font-size:.65rem;color:rgba(255,255,255,.4)">Aucune attaque disponible. Montez de niveau ou achetez des CTs !</div>' : ''}
+    </div>` : (detailSlot ? `<div style="font-size:.65rem;color:rgba(255,255,255,.4);margin-top:.5rem">Aucune attaque disponible pour le moment.</div>` : '');
+
+  el.innerHTML = `
+    <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+      <div style="text-align:center">
+        <img src="${imgSrc}" style="width:96px;height:96px;image-rendering:pixelated;${p.isShiny?'filter:drop-shadow(0 0 8px #ffd700)':''}"/>
+        <div style="font-family:'Press Start 2P',monospace;font-size:.42rem;color:${p.isShiny?'#ffd700':'var(--yellow)'};margin-top:.3rem">${p.currentName||p.name}${p.isShiny?' ✨':''}</div>
+        <div style="font-size:.65rem;color:rgba(255,255,255,.5)">Niv. ${p.level}</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem;font-size:.7rem;margin-bottom:.5rem">
+          ${[['❤️ PV',`${Math.ceil(p.hp)}/${p.maxHp}`],['⚔️ ATQ',p.atk],['🛡️ DEF',p.def],['✨ SpAtq',p.magic],['⚡ VIT',p.spd],['XP',`${p.xp||0}/${p.xpNext||100}`]].map(([k,v])=>`<div style="background:rgba(255,255,255,.05);border-radius:6px;padding:.2rem .4rem"><span style="color:rgba(255,255,255,.5)">${k}</span> <span style="color:var(--yellow);float:right">${v}</span></div>`).join('')}
+        </div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:.32rem;color:rgba(255,255,255,.5);margin-bottom:.1rem">PV</div>
+        <div style="width:100%;height:10px;background:rgba(0,0,0,.4);border-radius:999px;overflow:hidden;margin-bottom:.4rem"><div style="height:100%;background:${hpPct>50?'linear-gradient(90deg,#2dc653,#06d6a0)':hpPct>20?'linear-gradient(90deg,#ffd60a,#ff9a3c)':'linear-gradient(90deg,#e63946,#ff6b9d)'};width:${hpPct}%;border-radius:999px"></div></div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:.32rem;color:rgba(255,255,255,.5);margin-bottom:.1rem">XP</div>
+        <div style="width:100%;height:8px;background:rgba(0,0,0,.4);border-radius:999px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#ffd60a,#ff9a3c);width:${xpPct}%;border-radius:999px"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:.8rem;font-family:'Press Start 2P',monospace;font-size:.42rem;color:rgba(255,255,255,.6)">🥊 ATTAQUES (cliquer pour changer)</div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-top:.3rem">
+      ${moveCard(p.move, m1, 'move1', p.moveUses||m1.pp, p.moveUsesMax||m1.pp)}
+      ${moveCard(p.mMove, m2, 'move2', p.mMoveUses||m2.pp, p.mMoveUsesMax||m2.pp)}
+    </div>
+    ${learnSection}
+  `;
+}
+
+function selectMoveSlot(slot) {
+  detailSlot = (detailSlot === slot) ? null : slot;
+  renderPokeDetail();
+}
+
+function equipMove(moveName, ctId) {
+  if (!detailSlot || detailPokeIdx === null) return;
+  const p = player.roster[detailPokeIdx];
+  if (!p) return;
+  const md = MOVES_DB[moveName];
+  if (!md) return;
+  // Consume CT if used
+  if (ctId && player.ctBag && player.ctBag[ctId] > 0) {
+    player.ctBag[ctId]--;
+    notify(`${moveName} appris via CT !`);
+  } else {
+    notify(`${moveName} appris !`);
+  }
+  if (detailSlot === 'move1') {
+    p.move = moveName;
+    p.moveElem = md.type;
+    p.moveUses = md.pp;
+    p.moveUsesMax = md.pp;
+    p.animType = typeToAnim(md.type);
+  } else {
+    p.mMove = moveName;
+    p.mMoveElem = md.type;
+    p.mMoveUses = md.pp;
+    p.mMoveUsesMax = md.pp;
+  }
+  // If this is the active pokemon, sync back
+  if (detailPokeIdx === (player.activeRosterIdx || 0)) {
+    syncPlayerFromActive();
+    updateHUD();
+  }
+  detailSlot = null;
+  renderPokeDetail();
+}
+
+function typeToAnim(type) {
+  const map = { Feu:'fire', Eau:'water', Plante:'leaf', Électrik:'thunder' };
+  return map[type] || 'normal';
+}
+
+// Niveau min/max par zone
+const ZONE_LEVELS = {
+  'bourg-palette':  [2,5],
+  'route-1':        [3,6],
+  'jadielle':       [4,7],
+  'route-2':        [5,9],
+  'foret-jade':     [6,10],
+  'argenta':        [8,13],
+  'route-3':        [9,14],
+  'mt-lune':        [10,16],
+  'brindibourg':    [13,18],
+  'route-4':        [14,19],
+  'route-24':       [14,18],
+  'route-25':       [13,17],
+  'safrania':       [18,25],
+  'route-5':        [15,20],
+  'route-6':        [16,21],
+  'cramois-ile':    [20,28],
+  'route-7':        [18,24],
+  'lavanville':     [20,26],
+  'route-8':        [18,24],
+  'route-12':       [22,28],
+  'azuria':         [20,27],
+  'grotte-azuria':  [19,25],
+  'route-9':        [20,26],
+  'route-10':       [21,27],
+  'carmin-sur-mer': [25,32],
+  'route-11':       [23,29],
+  'route-21':       [25,33],
+  'parmanie':       [28,36],
+  'route-13':       [26,32],
+  'route-14':       [27,33],
+  'route-15':       [25,31],
+  'celadopole':     [22,29],
+  'route-16':       [20,26],
+  'route-19':       [28,35],
+  'route-20':       [29,37],
+  'iles-ecume':     [35,45],
+  'route-22':       [32,40],
+  'ligue-pokemon':  [50,70],
+  'jadielle-nord':  [6,11],
+};
+
+// Vitesse originale Gen 1 par pokémon
+const GEN1_SPD = {
+  1:45,2:60,3:80,4:65,5:80,6:100,7:43,8:58,9:78,10:45,11:30,12:70,
+  13:35,14:25,15:75,16:56,17:71,18:101,19:72,20:97,21:71,22:100,
+  23:55,24:80,25:90,26:110,27:75,28:90,29:41,30:56,31:76,32:40,33:55,
+  34:85,35:60,36:50,37:65,38:76,39:20,40:50,41:55,42:85,43:40,44:55,
+  45:75,46:25,47:30,48:60,49:90,50:95,51:120,52:90,53:115,54:55,55:85,
+  56:74,57:105,58:60,59:95,60:25,61:65,62:70,63:90,64:105,65:120,
+  66:35,67:45,68:55,69:35,70:50,71:70,72:70,73:100,74:20,75:30,76:45,
+  77:85,78:105,79:15,80:30,81:70,82:70,83:61,84:75,85:110,86:45,87:65,
+  88:25,89:35,90:40,91:55,92:95,93:100,94:80,95:70,96:42,97:67,98:50,
+  99:75,100:100,101:150,102:40,103:55,104:35,105:45,106:87,107:76,108:30,
+  109:35,110:60,111:25,112:40,113:60,114:55,115:90,116:60,117:82,118:68,
+  119:80,120:85,121:100,122:90,123:110,124:95,125:105,126:93,127:85,
+  128:110,129:80,130:81,131:60,132:48,133:55,134:65,135:110,136:65,
+  137:40,138:35,139:45,140:55,141:80,142:130,143:30,144:85,145:100,
+  146:90,147:50,148:70,149:80,150:130,151:100,
+};
+const GEN1 = [
+  {id:1,n:'Bulbizarre',t:'Plante',hp:45,atk:9,def:7,xp:16,g:8},
+  {id:2,n:'Herbizarre',t:'Plante',hp:60,atk:12,def:9,xp:22,g:12},
+  {id:3,n:'Florizarre',t:'Plante',hp:80,atk:16,def:13,xp:40,g:30},
+  {id:4,n:'Salamèche',t:'Feu',hp:39,atk:10,def:6,xp:14,g:7},
+  {id:5,n:'Reptincel',t:'Feu',hp:58,atk:14,def:9,xp:20,g:12},
+  {id:6,n:'Dracaufeu',t:'Feu',hp:78,atk:19,def:12,xp:45,g:35},
+  {id:7,n:'Carapuce',t:'Eau',hp:44,atk:9,def:11,xp:16,g:8},
+  {id:8,n:'Carabaffe',t:'Eau',hp:59,atk:13,def:14,xp:22,g:14},
+  {id:9,n:'Tortank',t:'Eau',hp:79,atk:18,def:18,xp:42,g:32},
+  {id:10,n:'Chenipan',t:'Insecte',hp:45,atk:5,def:4,xp:10,g:4},
+  {id:11,n:'Chrysacier',t:'Insecte',hp:50,atk:3,def:15,xp:12,g:5},
+  {id:12,n:'Papilusion',t:'Insecte',hp:60,atk:9,def:8,xp:28,g:18},
+  {id:13,n:'Aspicot',t:'Insecte',hp:40,atk:6,def:5,xp:10,g:4},
+  {id:14,n:'Coconfort',t:'Insecte',hp:45,atk:4,def:14,xp:12,g:5},
+  {id:15,n:'Dardargnan',t:'Insecte',hp:65,atk:16,def:9,xp:30,g:20},
+  {id:16,n:'Roucool',t:'Normal',hp:40,atk:7,def:5,xp:12,g:5},
+  {id:17,n:'Roucoups',t:'Normal',hp:63,atk:12,def:8,xp:20,g:11},
+  {id:18,n:'Roucarnage',t:'Normal',hp:83,atk:18,def:11,xp:38,g:28},
+  {id:19,n:'Rattata',t:'Normal',hp:30,atk:7,def:4,xp:10,g:5},
+  {id:20,n:'Rattatac',t:'Normal',hp:55,atk:13,def:7,xp:18,g:10},
+  {id:21,n:'Piafabec',t:'Normal',hp:40,atk:10,def:4,xp:12,g:6},
+  {id:22,n:'Rapasdepic',t:'Normal',hp:65,atk:17,def:7,xp:22,g:14},
+  {id:23,n:'Abo',t:'Poison',hp:35,atk:8,def:6,xp:12,g:6},
+  {id:24,n:'Arbok',t:'Poison',hp:60,atk:15,def:9,xp:24,g:16},
+  {id:25,n:'Pikachu',t:'Électrik',hp:35,atk:9,def:4,xp:18,g:10},
+  {id:26,n:'Raichu',t:'Électrik',hp:60,atk:17,def:7,xp:32,g:22},
+  {id:27,n:'Sabelette',t:'Normal',hp:50,atk:10,def:6,xp:14,g:7},
+  {id:28,n:'Sablaireau',t:'Normal',hp:75,atk:17,def:9,xp:26,g:18},
+  {id:29,n:'Nidoran♀',t:'Poison',hp:55,atk:7,def:6,xp:13,g:6},
+  {id:30,n:'Nidorina',t:'Poison',hp:70,atk:11,def:9,xp:20,g:12},
+  {id:31,n:'Nidoqueen',t:'Poison',hp:90,atk:16,def:13,xp:40,g:30},
+  {id:32,n:'Nidoran♂',t:'Poison',hp:46,atk:8,def:5,xp:13,g:6},
+  {id:33,n:'Nidorino',t:'Poison',hp:61,atk:12,def:8,xp:20,g:12},
+  {id:34,n:'Nidoking',t:'Poison',hp:81,atk:17,def:11,xp:40,g:30},
+  {id:35,n:'Mélodelfe',t:'Normal',hp:70,atk:7,def:8,xp:20,g:12},
+  {id:36,n:'Méloféé',t:'Normal',hp:95,atk:11,def:13,xp:35,g:25},
+  {id:37,n:'Goupix',t:'Feu',hp:38,atk:8,def:5,xp:14,g:8},
+  {id:38,n:'Feunard',t:'Feu',hp:73,atk:13,def:9,xp:30,g:22},
+  {id:39,n:'Rondoudou',t:'Normal',hp:115,atk:7,def:3,xp:18,g:10},
+  {id:40,n:'Grodoudou',t:'Normal',hp:140,atk:10,def:5,xp:32,g:20},
+  {id:41,n:'Nosferapti',t:'Poison',hp:40,atk:8,def:4,xp:12,g:6},
+  {id:42,n:'Nosféralto',t:'Poison',hp:75,atk:14,def:8,xp:26,g:16},
+  {id:43,n:'Mystherbe',t:'Plante',hp:45,atk:8,def:7,xp:14,g:7},
+  {id:44,n:'Ortide',t:'Plante',hp:60,atk:11,def:9,xp:20,g:12},
+  {id:45,n:'Rafflesia',t:'Plante',hp:75,atk:15,def:11,xp:36,g:26},
+  {id:46,n:'Paras',t:'Insecte',hp:35,atk:9,def:5,xp:12,g:6},
+  {id:47,n:'Parasect',t:'Insecte',hp:60,atk:14,def:10,xp:24,g:16},
+  {id:48,n:'Mimitoss',t:'Insecte',hp:60,atk:8,def:6,xp:16,g:8},
+  {id:49,n:'Aéromite',t:'Insecte',hp:70,atk:12,def:8,xp:28,g:18},
+  {id:50,n:'Taupiqueur',t:'Sol',hp:10,atk:7,def:3,xp:10,g:5},
+  {id:51,n:'Triopikeur',t:'Sol',hp:35,atk:13,def:6,xp:20,g:12},
+  {id:52,n:'Miaouss',t:'Normal',hp:40,atk:8,def:5,xp:14,g:7},
+  {id:53,n:'Persian',t:'Normal',hp:65,atk:13,def:8,xp:25,g:16},
+  {id:54,n:'Psykokwak',t:'Eau',hp:50,atk:9,def:5,xp:15,g:8},
+  {id:55,n:'Akwakwak',t:'Eau',hp:80,atk:15,def:8,xp:28,g:18},
+  {id:56,n:'Férosinge',t:'Combat',hp:40,atk:11,def:4,xp:14,g:7},
+  {id:57,n:'Colossinge',t:'Combat',hp:65,atk:18,def:7,xp:26,g:18},
+  {id:58,n:'Caninos',t:'Feu',hp:55,atk:12,def:5,xp:18,g:10},
+  {id:59,n:'Arcanin',t:'Feu',hp:90,atk:19,def:9,xp:38,g:28},
+  {id:60,n:'Ptitard',t:'Eau',hp:40,atk:7,def:8,xp:12,g:6},
+  {id:61,n:'Têtarte',t:'Eau',hp:65,atk:12,def:11,xp:22,g:14},
+  {id:62,n:'Tartard',t:'Eau',hp:90,atk:18,def:14,xp:40,g:30},
+  {id:63,n:'Abra',t:'Psy',hp:25,atk:4,def:2,xp:12,g:7},
+  {id:64,n:'Kadabra',t:'Psy',hp:40,atk:6,def:3,xp:22,g:14},
+  {id:65,n:'Alakazam',t:'Psy',hp:55,atk:8,def:4,xp:38,g:28},
+  {id:66,n:'Machoc',t:'Combat',hp:70,atk:14,def:6,xp:16,g:9},
+  {id:67,n:'Machopeur',t:'Combat',hp:80,atk:18,def:8,xp:25,g:16},
+  {id:68,n:'Mackogneur',t:'Combat',hp:90,atk:22,def:10,xp:38,g:28},
+  {id:69,n:'Chétiflor',t:'Plante',hp:44,atk:9,def:7,xp:14,g:7},
+  {id:70,n:'Boustiflor',t:'Plante',hp:59,atk:13,def:9,xp:20,g:12},
+  {id:71,n:'Empiflor',t:'Plante',hp:80,atk:17,def:12,xp:36,g:26},
+  {id:72,n:'Tentacool',t:'Eau',hp:40,atk:7,def:4,xp:14,g:7},
+  {id:73,n:'Tentacruel',t:'Eau',hp:80,atk:14,def:9,xp:30,g:22},
+  {id:74,n:'Racaillou',t:'Roche',hp:40,atk:12,def:13,xp:12,g:7},
+  {id:75,n:'Gravalanch',t:'Roche',hp:55,atk:16,def:16,xp:22,g:14},
+  {id:76,n:'Grolem',t:'Roche',hp:80,atk:20,def:20,xp:38,g:28},
+  {id:77,n:'Ponyta',t:'Feu',hp:50,atk:15,def:5,xp:18,g:10},
+  {id:78,n:'Galopa',t:'Feu',hp:65,atk:18,def:7,xp:28,g:20},
+  {id:79,n:'Ramoloss',t:'Eau',hp:90,atk:7,def:8,xp:20,g:12},
+  {id:80,n:'Flagadoss',t:'Eau',hp:95,atk:11,def:10,xp:32,g:22},
+  {id:81,n:'Magnéti',t:'Électrik',hp:25,atk:8,def:11,xp:16,g:9},
+  {id:82,n:'Magnéton',t:'Électrik',hp:50,atk:13,def:15,xp:28,g:20},
+  {id:83,n:"Canarticho",t:'Normal',hp:52,atk:12,def:6,xp:18,g:10},
+  {id:84,n:'Doduo',t:'Normal',hp:35,atk:14,def:3,xp:14,g:7},
+  {id:85,n:'Dodrio',t:'Normal',hp:60,atk:19,def:6,xp:26,g:18},
+  {id:86,n:'Otaria',t:'Eau',hp:65,atk:10,def:9,xp:18,g:10},
+  {id:87,n:'Lamantine',t:'Eau',hp:90,atk:14,def:12,xp:30,g:22},
+  {id:88,n:'Tadmorv',t:'Poison',hp:80,atk:12,def:5,xp:20,g:12},
+  {id:89,n:'Grotadmorv',t:'Poison',hp:105,atk:17,def:8,xp:36,g:26},
+  {id:90,n:'Kokiyas',t:'Eau',hp:30,atk:6,def:14,xp:12,g:6},
+  {id:91,n:'Crustabri',t:'Eau',hp:50,atk:10,def:20,xp:24,g:16},
+  {id:92,n:'Fantominus',t:'Spectre',hp:30,atk:6,def:3,xp:14,g:8},
+  {id:93,n:'Spectrum',t:'Spectre',hp:45,atk:9,def:5,xp:22,g:14},
+  {id:94,n:'Ectoplasma',t:'Spectre',hp:60,atk:12,def:7,xp:40,g:30},
+  {id:95,n:'Onix',t:'Roche',hp:35,atk:7,def:25,xp:22,g:14},
+  {id:96,n:'Soporifik',t:'Psy',hp:60,atk:8,def:6,xp:14,g:8},
+  {id:97,n:'Hypnomade',t:'Psy',hp:85,atk:13,def:9,xp:28,g:20},
+  {id:98,n:'Krabby',t:'Eau',hp:30,atk:16,def:14,xp:12,g:7},
+  {id:99,n:'Krabboss',t:'Eau',hp:55,atk:22,def:18,xp:24,g:16},
+  {id:100,n:'Voltorbe',t:'Électrik',hp:40,atk:8,def:6,xp:14,g:8},
+  {id:101,n:'Électrode',t:'Électrik',hp:60,atk:12,def:9,xp:26,g:18},
+  {id:102,n:'Noeunoeuf',t:'Plante',hp:60,atk:8,def:8,xp:18,g:10},
+  {id:103,n:'Noadkoko',t:'Plante',hp:95,atk:14,def:12,xp:36,g:26},
+  {id:104,n:'Osselait',t:'Sol',hp:50,atk:13,def:9,xp:16,g:9},
+  {id:105,n:'Ossatueur',t:'Sol',hp:60,atk:18,def:12,xp:28,g:20},
+  {id:106,n:'Kicklee',t:'Combat',hp:50,atk:18,def:5,xp:28,g:18},
+  {id:107,n:'Tygnon',t:'Combat',hp:50,atk:18,def:5,xp:28,g:18},
+  {id:108,n:'Excelangue',t:'Normal',hp:90,atk:8,def:8,xp:24,g:16},
+  {id:109,n:'Smogo',t:'Poison',hp:40,atk:7,def:5,xp:14,g:7},
+  {id:110,n:'Smogogo',t:'Poison',hp:65,atk:11,def:8,xp:26,g:18},
+  {id:111,n:'Rhinocorne',t:'Sol',hp:80,atk:17,def:12,xp:24,g:16},
+  {id:112,n:'Rhinoféros',t:'Sol',hp:105,atk:22,def:15,xp:42,g:32},
+  {id:113,n:'Leveinard',t:'Normal',hp:250,atk:4,def:3,xp:40,g:30},
+  {id:114,n:'Saquedeneu',t:'Plante',hp:65,atk:9,def:9,xp:20,g:12},
+  {id:115,n:'Kangourex',t:'Normal',hp:105,atk:17,def:10,xp:40,g:30},
+  {id:116,n:'Hypotrempe',t:'Eau',hp:45,atk:7,def:6,xp:14,g:7},
+  {id:117,n:'Hypocéan',t:'Eau',hp:55,atk:11,def:9,xp:22,g:14},
+  {id:118,n:'Poisson-R',t:'Eau',hp:45,atk:10,def:5,xp:14,g:7},
+  {id:119,n:'Poissoroy',t:'Eau',hp:80,atk:16,def:8,xp:28,g:20},
+  {id:120,n:'Stari',t:'Eau',hp:30,atk:6,def:3,xp:12,g:6},
+  {id:121,n:'Staross',t:'Eau',hp:60,atk:11,def:5,xp:26,g:18},
+  {id:122,n:'M. Mime',t:'Psy',hp:40,atk:6,def:8,xp:22,g:14},
+  {id:123,n:'Insécateur',t:'Insecte',hp:70,atk:19,def:8,xp:32,g:22},
+  {id:124,n:'Lippoutou',t:'Glace',hp:65,atk:10,def:7,xp:28,g:18},
+  {id:125,n:'Élektek',t:'Électrik',hp:65,atk:19,def:6,xp:32,g:22},
+  {id:126,n:'Magmar',t:'Feu',hp:65,atk:18,def:6,xp:32,g:22},
+  {id:127,n:'Scarabrute',t:'Insecte',hp:65,atk:22,def:10,xp:34,g:24},
+  {id:128,n:'Tauros',t:'Normal',hp:75,atk:18,def:10,xp:34,g:24},
+  {id:129,n:'Magicarpe',t:'Eau',hp:20,atk:2,def:3,xp:6,g:3},
+  {id:130,n:'Léviator',t:'Eau',hp:95,atk:22,def:11,xp:50,g:40},
+  {id:131,n:'Lokhlass',t:'Eau',hp:130,atk:14,def:14,xp:48,g:38},
+  {id:132,n:'Métamorph',t:'Normal',hp:48,atk:9,def:9,xp:20,g:12},
+  {id:133,n:'Évoli',t:'Normal',hp:55,atk:10,def:7,xp:16,g:9},
+  {id:134,n:'Aquali',t:'Eau',hp:130,atk:12,def:13,xp:40,g:30},
+  {id:135,n:'Voltali',t:'Électrik',hp:65,atk:16,def:7,xp:40,g:30},
+  {id:136,n:'Pyroli',t:'Feu',hp:65,atk:18,def:7,xp:40,g:30},
+  {id:137,n:'Porygon',t:'Normal',hp:65,atk:11,def:11,xp:28,g:20},
+  {id:138,n:'Amonita',t:'Roche',hp:35,atk:9,def:14,xp:16,g:9},
+  {id:139,n:'Amonistar',t:'Roche',hp:60,atk:14,def:17,xp:28,g:20},
+  {id:140,n:'Kabuto',t:'Roche',hp:30,atk:12,def:14,xp:16,g:9},
+  {id:141,n:'Kabutops',t:'Roche',hp:60,atk:19,def:15,xp:30,g:22},
+  {id:142,n:'Ptéra',t:'Vol',hp:80,atk:20,def:8,xp:45,g:35},
+  {id:143,n:'Ronflex',t:'Normal',hp:160,atk:18,def:8,xp:50,g:40},
+  {id:144,n:'Artikodin',t:'Glace',hp:90,atk:19,def:14,xp:65,g:55},
+  {id:145,n:'Électhor',t:'Électrik',hp:90,atk:20,def:12,xp:65,g:55},
+  {id:146,n:'Sulfura',t:'Feu',hp:90,atk:20,def:12,xp:65,g:55},
+  {id:147,n:'Minidraco',t:'Dragon',hp:41,atk:9,def:6,xp:18,g:10},
+  {id:148,n:'Draco',t:'Dragon',hp:61,atk:13,def:9,xp:32,g:22},
+  {id:149,n:'Dracolosse',t:'Dragon',hp:91,atk:22,def:12,xp:60,g:50},
+  {id:150,n:'Mewtwo',t:'Psy',hp:106,atk:28,def:15,xp:80,g:80},
+  {id:151,n:'Mew',t:'Normal',hp:100,atk:22,def:14,xp:80,g:80},
+];
+
+// ══════════════════════════════════════════
+// ZONES DE KANTO
+// position: {x,y} en % sur la carte
+// connexions: zones accessibles
+// pokemons: liste d'ids Gen1
+// ══════════════════════════════════════════
+const ZONES = {
+  'bourg-palette': {
+    name:'Bourg-Palette', color:'#22cc66', x:18, y:82,
+    desc:'Le village natal. Herbes hautes calmes.',
+    connexions:['route-1','route-21'],
+    pokemon:[16,19,10,13,25,133]
+  },
+  'route-1': {
+    name:'Route 1', color:'#44bb44', x:18, y:68,
+    desc:'Première route herbeuse.',
+    connexions:['bourg-palette','jadielle'],
+    pokemon:[16,17,19,20,10,13]
+  },
+  'jadielle': {
+    name:'Jadielle City', color:'#66aaff', x:18, y:55,
+    desc:'Ville du Prof. Chen. Centre Pokémon.',
+    connexions:['route-1','route-2'],
+    pokemon:[16,19,25,35,39]
+  },
+  'route-2': {
+    name:'Route 2', color:'#44bb44', x:18, y:42,
+    desc:'Forêt de Jade à proximité.',
+    connexions:['jadielle','argenta'],
+    pokemon:[10,13,16,19,20,23]
+  },
+  'foret-jade': {
+    name:'Forêt de Jade', color:'#228822', x:30, y:42,
+    desc:'Forêt obscure. Insectes partout !',
+    connexions:['route-2','route-3'],
+    pokemon:[10,11,12,13,14,15,25,43,46,48]
+  },
+  'argenta': {
+    name:'Argenta City', color:'#aaaaff', x:18, y:28,
+    desc:'Ville grise. Arène Rondoudou.',
+    connexions:['route-2','route-3','mt-lune'],
+    pokemon:[19,20,21,22,16,17,27,29,32]
+  },
+  'route-3': {
+    name:'Route 3', color:'#55bb55', x:35, y:28,
+    desc:'Chemin vers Brindibourg.',
+    connexions:['argenta','foret-jade','mt-lune'],
+    pokemon:[19,20,21,22,23,16,17,41,42]
+  },
+  'mt-lune': {
+    name:'Mt. Lune', color:'#8877bb', x:50, y:28,
+    desc:'Grotte sombre. Fossiles et roches.',
+    connexions:['route-3','brindibourg'],
+    pokemon:[41,42,74,95,50,51,63,81]
+  },
+  'brindibourg': {
+    name:'Brindibourg', color:'#ff9944', x:68, y:28,
+    desc:'Ville des frères ! Eau & Feu.',
+    connexions:['mt-lune','route-4','route-24','route-25'],
+    pokemon:[54,55,60,61,72,98,116,118,120]
+  },
+  'route-4': {
+    name:'Route 4', color:'#55bb55', x:82, y:28,
+    desc:'Plage rocheuse à l\'Est.',
+    connexions:['brindibourg','safrania'],
+    pokemon:[21,22,16,17,27,28,58,77]
+  },
+  'route-24': {
+    name:'Route 24 (Pont)', color:'#4499ee', x:68, y:15,
+    desc:'Pont des Ronces — eaux infestées !',
+    connexions:['brindibourg','route-25'],
+    pokemon:[72,73,60,120,116,117,129]
+  },
+  'route-25': {
+    name:'Route 25', color:'#55bb55', x:82, y:15,
+    desc:'Coin du Cap, fleurs et insectes.',
+    connexions:['route-24','brindibourg'],
+    pokemon:[10,13,16,43,46,69,13,48]
+  },
+  'safrania': {
+    name:'Safrania City', color:'#ff4499', x:82, y:42,
+    desc:'Capitale mystère. Silph S.A.',
+    connexions:['route-4','route-5','route-6','route-7','route-8'],
+    pokemon:[63,64,96,97,100,101,60,92]
+  },
+  'route-5': {
+    name:'Route 5', color:'#55bb55', x:68, y:42,
+    desc:'Herbes au sud de Brindibourg.',
+    connexions:['brindibourg','safrania'],
+    pokemon:[19,20,29,30,32,33,43,44,69]
+  },
+  'route-6': {
+    name:'Route 6', color:'#55bb55', x:68, y:55,
+    desc:'Prairie calme.',
+    connexions:['safrania','cramois-ile'],
+    pokemon:[19,23,43,56,66,111]
+  },
+  'cramois-ile': {
+    name:'Cramois\'Île', color:'#cc4444', x:68, y:68,
+    desc:'Île volcanique. Pokémon de Feu !',
+    connexions:['route-6','route-7'],
+    pokemon:[4,5,37,38,58,59,77,78,126,136]
+  },
+  'route-7': {
+    name:'Route 7', color:'#55bb55', x:50, y:42,
+    desc:'Herbes denses à l\'ouest.',
+    connexions:['safrania','lavanville','celadopole'],
+    pokemon:[23,24,37,43,52,56,58,69]
+  },
+  'lavanville': {
+    name:'Lavanville', color:'#9966aa', x:50, y:55,
+    desc:'Ville des spectres. Tour Pokémon.',
+    connexions:['route-7','route-8','route-12'],
+    pokemon:[92,93,94,96,97,13,41]
+  },
+  'route-8': {
+    name:'Route 8', color:'#55bb55', x:50, y:68,
+    desc:'Route venteuse du sud.',
+    connexions:['lavanville','safrania','celadopole'],
+    pokemon:[19,23,29,32,43,69,79,98]
+  },
+  'route-12': {
+    name:'Route 12 (Pêche)', color:'#4488ff', x:50, y:80,
+    desc:'Route côtière — pêche abondante.',
+    connexions:['lavanville','azuria'],
+    pokemon:[72,129,54,60,98,116,118,120]
+  },
+  'azuria': {
+    name:'Azuria City', color:'#2288ff', x:35, y:55,
+    desc:'Ville au bord du lac. Arène Eau.',
+    connexions:['route-12','route-9','route-10','grotte-azuria'],
+    pokemon:[54,55,60,61,72,86,90,98,116]
+  },
+  'grotte-azuria': {
+    name:'Grotte Azuria', color:'#445588', x:22, y:55,
+    desc:'Grotte mystérieuse — Mew ?',
+    connexions:['azuria'],
+    pokemon:[74,75,95,41,42,63,81,92]
+  },
+  'route-9': {
+    name:'Route 9', color:'#55bb55', x:35, y:42,
+    desc:'Herbes rocailleuses.',
+    connexions:['azuria','route-10'],
+    pokemon:[19,23,29,32,56,74,100]
+  },
+  'route-10': {
+    name:'Route 10 / Centrale', color:'#ffcc00', x:50, y:42,
+    desc:'Centrale Électrique.',
+    connexions:['azuria','route-9','lavanville'],
+    pokemon:[81,82,100,101,25,26,125]
+  },
+  'carmin-sur-mer': {
+    name:'Carmin-sur-Mer', color:'#cc2222', x:35, y:68,
+    desc:'Ville portuaire. Arène Combat.',
+    connexions:['route-12','route-11','route-21'],
+    pokemon:[56,57,62,66,67,68,106,107,74,75]
+  },
+  'route-11': {
+    name:'Route 11', color:'#55bb55', x:50, y:68,
+    desc:'Route entre Carmin et Lavanville.',
+    connexions:['carmin-sur-mer','lavanville'],
+    pokemon:[23,27,69,72,79,84,98]
+  },
+  'route-21': {
+    name:'Route 21 (Mer)', color:'#0055cc', x:18, y:68,
+    desc:'Mer ouverte — surf obligatoire.',
+    connexions:['bourg-palette','carmin-sur-mer'],
+    pokemon:[72,73,86,87,90,91,129,130,131]
+  },
+  'parmanie': {
+    name:'Parmanie City', color:'#dddd22', x:82, y:55,
+    desc:'Safari Zone. Arène Sol.',
+    connexions:['route-4','route-13','route-14','route-15'],
+    pokemon:[29,30,31,32,33,34,111,112,113,115,128,143]
+  },
+  'route-13': {
+    name:'Route 13', color:'#55bb55', x:82, y:68,
+    desc:'Route du vent. Pokémon Vol.',
+    connexions:['parmanie','route-14'],
+    pokemon:[16,17,18,21,22,84,85,123,132]
+  },
+  'route-14': {
+    name:'Route 14', color:'#55bb55', x:82, y:75,
+    desc:'Route poissonneuse.',
+    connexions:['route-13','route-15'],
+    pokemon:[16,21,84,100,72,98,116,118,120]
+  },
+  'route-15': {
+    name:'Route 15', color:'#55bb55', x:68, y:75,
+    desc:'Herbes du Bois aux Cèdres.',
+    connexions:['route-14','carmin-sur-mer'],
+    pokemon:[19,23,43,52,58,69,79,96]
+  },
+  'jadielle-nord': {
+    name:'Jadielle Nord', color:'#33aa77', x:18, y:35,
+    desc:'Nord calme — grotte à l\'horizon.',
+    connexions:['jadielle','argenta','route-2'],
+    pokemon:[16,27,35,39,41,52,96]
+  },
+  'iles-ecume': {
+    name:'Îles Écume', color:'#00bbee', x:22, y:82,
+    desc:'Grottes glacées. Légendaires !',
+    connexions:['route-21','carmin-sur-mer'],
+    pokemon:[54,86,87,90,91,116,124,131,144]
+  },
+  'route-22': {
+    name:'Route 22', color:'#55bb55', x:8, y:82,
+    desc:'Avant la Ligue Pokémon.',
+    connexions:['bourg-palette'],
+    pokemon:[19,23,56,41,27,21,16]
+  },
+  'ligue-pokemon': {
+    name:'Ligue Pokémon', color:'#ff4400', x:8, y:55,
+    desc:'⚠ Zone Élite — Pokémon rares !',
+    connexions:['route-22'],
+    pokemon:[142,143,144,145,146,147,148,149,150,151]
+  },
+  'celadopole': {
+    name:'Céladon City', color:'#88cc44', x:38, y:50,
+    desc:'Grande ville commerçante. Arène Plante.',
+    connexions:['route-7','route-8','route-16'],
+    pokemon:[52,53,43,44,45,69,70,71,132]
+  },
+  'route-16': {
+    name:'Route 16', color:'#55bb55', x:28, y:50,
+    desc:'Route à l\'ouest de Céladon.',
+    connexions:['celadopole','route-15'],
+    pokemon:[16,17,19,20,23,84,100]
+  },
+  'route-19': {
+    name:'Route 19', color:'#4488ff', x:50, y:78,
+    desc:'Route maritime au sud de Parmanie.',
+    connexions:['parmanie','route-20'],
+    pokemon:[72,73,86,87,90,91,129]
+  },
+  'route-20': {
+    name:'Route 20', color:'#4488ff', x:35, y:84,
+    desc:'Route maritime vers les Îles Écume.',
+    connexions:['route-19','iles-ecume','cramois-ile'],
+    pokemon:[72,73,86,87,90,91,129,130]
+  },
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let player = null;
+let enemy  = null;
+let currentScreen = 'title';
+
+// ══════════════════════════════════════════
+// SCREEN
+// ══════════════════════════════════════════
+function showScreen(id) {
+  if (id !== 'map' && mapAnimFrame){ cancelAnimationFrame(mapAnimFrame); mapAnimFrame=null; }
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); if(s.id==='screen-map') s.style.display='none'; });
+  document.getElementById('hud').classList.remove('visible');
+  document.body.className = '';
+  if (id==='title')     { document.getElementById('screen-title').classList.add('active'); document.body.classList.add('menu'); }
+  else if (id==='menu') { document.getElementById('screen-menu').classList.add('active'); document.body.classList.add('menu'); }
+  else if (id==='game') { document.getElementById('hud').classList.add('visible'); }
+  else if (id==='battle'){ document.getElementById('screen-battle').classList.add('active'); document.body.classList.add('battle'); document.getElementById('hud').classList.add('visible'); }
+  else if (id==='inventory'){ document.getElementById('screen-inventory').classList.add('active'); renderInventory(); }
+  else if (id==='shop') { document.getElementById('screen-shop').classList.add('active'); renderShop(); }
+  else if (id==='team') { document.getElementById('screen-team').classList.add('active'); renderTeam(); }
+  else if (id==='map')  { const ms=document.getElementById('screen-map'); ms.style.display='flex'; ms.classList.add('active'); setTimeout(renderMap,50); }
+  currentScreen = id;
+}
+
+function showInventory(){ showScreen('inventory'); }
+function showShop(){ showScreen('shop'); }
+function showTeam(){ showScreen('team'); }
+function showMap(){ showScreen('map'); }
+
+// ══════════════════════════════════════════
+// START
+// ══════════════════════════════════════════
+function startGame() {
+  const name = document.getElementById('char-name').value.trim() || 'Héros Anonyme';
+  const cls  = document.querySelector('.class-btn.selected')?.dataset.class || 'Évoli';
+  const base = CLASSES[cls];
+  const starterIsShiny = rollShiny();
+  const starterPoke = {
+    name: cls,
+    cls: cls,
+    spriteId: base.id,
+    currentSpriteId: base.id,
+    currentName: cls,
+    type: base.type,
+    dualType: getPokeType(base.id, base.type),
+    move: base.move, mMove: base.mMove, animType: base.animType,
+    moveElem: base.moveElem, mMoveElem: base.mMoveElem,
+    moveUses: base.moveUses, mMoveUses: base.mMoveUses,
+    moveUsesMax: base.moveUses, mMoveUsesMax: base.mMoveUses,
+    level:1, hp:base.hp, maxHp:base.hp, mp:base.mp, maxMp:base.mp,
+    xp:0, xpNext:100,
+    atk:base.atk, def:base.def, spd:base.spd, magic:base.magic,
+    isMain: true,
+    isShiny: starterIsShiny,
+  };
+  if (starterIsShiny) applyShinyBoost(starterPoke);
+  player = {
+    name, cls,
+    spriteId: base.id,
+    currentSpriteId: base.id,
+    currentName: cls,
+    type: base.type,
+    dualType: getPokeType(base.id, base.type),
+    move: base.move, mMove: base.mMove, animType: base.animType,
+    moveElem: base.moveElem, mMoveElem: base.mMoveElem,
+    moveUses: base.moveUses, mMoveUses: base.mMoveUses,
+    moveUsesMax: base.moveUses, mMoveUsesMax: base.mMoveUses,
+    level:1, hp:base.hp, maxHp:base.hp, mp:base.mp, maxMp:base.mp,
+    xp:0, xpNext:100,
+    atk:base.atk, def:base.def, spd:base.spd, magic:base.magic,
+    gold:500,
+    bag: { potion:2 },
+    balls: { pokeball:3 },
+    ctBag: {},
+    team: [],
+    roster: [starterPoke],
+    activeRosterIdx: 0,
+    items: base.items.map(i=>({...i})),
+    currentZone: 'bourg-palette',
+    visitedZones: ['bourg-palette'],
+    zoneKills: {},
+  };
+  showScreen('game');
+  updateHUD();
+  showZone('PokéQuest');
+  const shinyMsg = starterIsShiny ? ' ✨ INCROYABLE ! Votre starter est SHINY !' : '';
+  setMessage(`Bienvenue Dresseur ${player.name} ! ${player.cls} est prêt pour l'aventure !${shinyMsg}`);
+  if (starterIsShiny) notify('✨ SHINY ! Rare 1/4096 !');
+  drawMinimap();
+}
+
+// ══════════════════════════════════════════
+// ROSTER HELPERS — stats par pokémon capturé
+// ══════════════════════════════════════════
+function getActivePoke() {
+  if (!player) return null;
+  if (player.roster && player.roster.length > 0) {
+    return player.roster[player.activeRosterIdx || 0];
+  }
+  return player; // fallback legacy
+}
+
+function syncPlayerFromActive() {
+  // Sync player's battle stats from active roster pokemon
+  if (!player.roster || player.roster.length === 0) return;
+  const p = getActivePoke();
+  if (!p) return;
+  player.currentSpriteId = p.currentSpriteId || p.spriteId;
+  player.currentName     = p.currentName || p.name;
+  player.type            = p.type;
+  player.dualType        = p.dualType || getPokeType(p.currentSpriteId || p.spriteId, p.type);
+  player.move            = p.move;
+  player.mMove           = p.mMove;
+  player.animType        = p.animType || 'normal';
+  player.moveElem        = p.moveElem;
+  player.mMoveElem       = p.mMoveElem;
+  player.moveUses        = p.moveUses;
+  player.mMoveUses       = p.mMoveUses;
+  player.moveUsesMax     = p.moveUsesMax;
+  player.mMoveUsesMax    = p.mMoveUsesMax;
+  player.level           = p.level;
+  player.hp              = p.hp;
+  player.maxHp           = p.maxHp;
+  player.mp              = p.mp;
+  player.maxMp           = p.maxMp;
+  player.xp              = p.xp;
+  player.xpNext          = p.xpNext;
+  player.atk             = p.atk;
+  player.def             = p.def;
+  player.spd             = p.spd;
+  player.magic           = p.magic;
+}
+
+function syncActiveFromPlayer() {
+  if (!player.roster || player.roster.length === 0) return;
+  const p = getActivePoke();
+  if (!p) return;
+  p.currentSpriteId = player.currentSpriteId;
+  p.currentName     = player.currentName;
+  p.type            = player.type;
+  p.dualType        = player.dualType;
+  p.level           = player.level;
+  p.hp              = player.hp;
+  p.maxHp           = player.maxHp;
+  p.mp              = player.mp;
+  p.maxMp           = player.maxMp;
+  p.xp              = player.xp;
+  p.xpNext          = player.xpNext;
+  p.atk             = player.atk;
+  p.def             = player.def;
+  p.spd             = player.spd;
+  p.magic           = player.magic;
+  p.moveUses        = player.moveUses;
+  p.mMoveUses       = player.mMoveUses;
+}
+
+function switchToRosterPoke(idx, fromBattle=false) {
+  if (!player.roster || idx < 0 || idx >= player.roster.length) return false;
+  const target = player.roster[idx];
+  if (!target) return false;
+  if (target.hp <= 0) { notify(`${target.currentName||target.name} est K.O. !`); return false; }
+  if (idx === (player.activeRosterIdx||0)) { notify('Déjà sur le terrain !'); return false; }
+
+  // Save current active back
+  syncActiveFromPlayer();
+
+  // Switch
+  player.activeRosterIdx = idx;
+  syncPlayerFromActive();
+  return true;
+}
+
+function addCapturedToRoster(capturedData) {
+  if (!player.roster) player.roster = [];
+  const pData = GEN1.find(p=>p.id===capturedData.id);
+  const baseClass = CLASSES[capturedData.name];
+  const spd = GEN1_SPD[capturedData.id] || 50;
+  const lvl = capturedData.level || 1;
+  const scale = 1 + lvl * 0.12;
+  const newPoke = {
+    name: capturedData.name,
+    currentName: capturedData.name,
+    spriteId: capturedData.id,
+    currentSpriteId: capturedData.id,
+    type: capturedData.type,
+    dualType: getPokeType(capturedData.id, capturedData.type),
+    level: lvl,
+    hp: Math.round((pData?.hp||capturedData.hp) * scale),
+    maxHp: Math.round((pData?.hp||capturedData.maxHp) * scale),
+    mp: 50,
+    maxMp: 50,
+    xp: 0,
+    xpNext: Math.floor(100 * Math.pow(1.45, lvl-1)),
+    atk: Math.round((pData?.atk||10) * scale),
+    def: Math.round((pData?.def||5) * scale),
+    spd: Math.round(spd * (1 + lvl * 0.02)),
+    magic: Math.round((pData?.atk||8) * scale * 0.8),
+    move: 'Attaque', mMove: 'Capacité',
+    moveElem: capturedData.type, mMoveElem: capturedData.type,
+    moveUses: 6, mMoveUses: 4, moveUsesMax: 6, mMoveUsesMax: 4,
+    animType: capturedData.type === 'Feu' ? 'fire' : capturedData.type === 'Eau' ? 'water' : capturedData.type === 'Plante' ? 'leaf' : capturedData.type === 'Électrik' ? 'thunder' : 'normal',
+    isMain: false,
+    isShiny: capturedData.isShiny || false,
+  };
+  if (newPoke.isShiny) applyShinyBoost(newPoke);
+  player.roster.push(newPoke);
+  player.team.push({ name:capturedData.name, id:capturedData.id, type:capturedData.type, level:lvl, hp:newPoke.hp, maxHp:newPoke.maxHp });
+}
+
+// ══════════════════════════════════════════
+// HUD
+// ══════════════════════════════════════════
+function updateHUD() {
+  if (!player) return;
+  document.getElementById('player-name-hud').textContent = `${player.currentName} de ${player.name} ✦ Niv.${player.level}`;
+  document.getElementById('gold-val').textContent = player.gold;
+  setBar('bar-hp','val-hp', player.hp, player.maxHp);
+  setBar('bar-xp','val-xp', player.xp, player.xpNext);
+  // Attack uses display
+  const atkDisp = document.getElementById('atk-uses-display');
+  if (atkDisp) {
+    const t1 = player.moveElem || player.type;
+    const t2 = player.mMoveElem || player.type;
+    atkDisp.innerHTML = `<span class="atk-use-label">${player.move||'Atk'}</span><span class="atk-elem-badge elem-${t1}" style="font-size:.28rem;padding:.1rem .3rem">${t1}</span><span style="width:.5rem;display:inline-block"></span><span class="atk-use-label">${player.mMove||'Magie'}</span><span class="atk-elem-badge elem-${t2}" style="font-size:.28rem;padding:.1rem .3rem">${t2}</span>`;
+  }
+}
+function setBar(barId, valId, cur, max) {
+  const pct = Math.max(0, Math.min(100, (cur/max)*100));
+  document.getElementById(barId).style.width = pct+'%';
+  document.getElementById(valId).textContent = `${Math.ceil(cur)} / ${max}`;
+}
+function setMessage(text){ document.getElementById('message-box').textContent = text; }
+function showZone(name) {
+  const el = document.getElementById('zone-label');
+  el.textContent = name; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════
+// EXPLORE
+// ══════════════════════════════════════════
+function doExplore() {
+  if (!player) return;
+  const zone = ZONES[player.currentZone] || ZONES['bourg-palette'];
+  const roll = Math.random();
+  if (roll < 0.50) {
+    // Choisir un pokemon de la zone
+    const pokeId = zone.pokemon[Math.floor(Math.random()*zone.pokemon.length)];
+    const pData = GEN1.find(p=>p.id===pokeId);
+    if (pData) {
+      const [lvlMin, lvlMax] = ZONE_LEVELS[player.currentZone] || [1,5];
+      const enemyLevel = Math.floor(Math.random()*(lvlMax-lvlMin+1))+lvlMin;
+      const lvlScale = 1 + (enemyLevel * 0.12);
+      const baseSpd = GEN1_SPD[pData.id] || 50;
+      const e = {
+        name: pData.n,
+        id: pData.id,
+        level: enemyLevel,
+        hp: Math.round(pData.hp * lvlScale),
+        atk: Math.round(pData.atk * lvlScale),
+        def: Math.round(pData.def * lvlScale) || 1,
+        spd: Math.round(baseSpd * (1 + enemyLevel * 0.02)),
+        xp: Math.round(pData.xp * lvlScale),
+        gold: Math.round(pData.g * lvlScale),
+        type: pData.t,
+        isShiny: rollShiny(),
+      };
+      if (e.isShiny) {
+        e.hp  = Math.round(e.hp  * 1.15);
+        e.atk = Math.round(e.atk * 1.15);
+        e.def = Math.round(e.def * 1.15);
+        e.spd = Math.round(e.spd * 1.15);
+      }
+      showPreBattleMenu(e);
+    }
+  } else if (roll < 0.65) {
+    const g = Math.floor(Math.random()*30)+10;
+    player.gold += g; updateHUD();
+    setMessage(`✦ Vous trouvez ${g} Pokédollars dans ${zone.name} !`); notify(`+${g} ₽`);
+  } else if (roll < 0.75) {
+    player.bag.potion = (player.bag.potion||0)+1;
+    setMessage('🧪 Une Potion scintille dans l\'herbe. Vous la ramassez !'); notify('+1 Potion');
+  } else {
+    setMessage(EVENTS[Math.floor(Math.random()*EVENTS.length)]);
+  }
+  drawMinimap();
+}
+let lastRestTime = 0;
+const REST_COOLDOWN = 30000; // 30 secondes
+
+function doRest() {
+  if (!player) return;
+  const now = Date.now();
+  const elapsed = now - lastRestTime;
+  if (lastRestTime > 0 && elapsed < REST_COOLDOWN) {
+    const remain = Math.ceil((REST_COOLDOWN - elapsed) / 1000);
+    setMessage(`🏥 Le Centre Pokémon se recharge… encore ${remain}s.`);
+    notify(`⏳ Attendre ${remain}s`);
+    return;
+  }
+  lastRestTime = now;
+  const hpPct = 0.35, mpPct = 0.40;
+  const hpG = Math.floor(player.maxHp * hpPct);
+  const mpG = Math.floor(player.maxMp * mpPct);
+  player.hp = Math.min(player.maxHp, player.hp + hpG);
+  player.mp = Math.min(player.maxMp, player.mp + mpG);
+  // Recharge toutes les utilisations d'attaques
+  player.moveUses = player.moveUsesMax || 6;
+  player.mMoveUses = player.mMoveUsesMax || 4;
+  // Heal all roster pokemon too
+  if (player.roster) {
+    player.roster.forEach(p => {
+      p.hp = Math.min(p.maxHp, p.hp + Math.floor(p.maxHp * hpPct));
+      p.mp = Math.min(p.maxMp || 50, (p.mp||0) + Math.floor((p.maxMp||50) * mpPct));
+      p.moveUses = p.moveUsesMax || 6;
+      p.mMoveUses = p.mMoveUsesMax || 4;
+    });
+    syncActiveFromPlayer(); syncPlayerFromActive();
+  }
+  updateHUD();
+  setMessage(`🏥 ${player.currentName} se repose au Centre Pokémon. +${Math.round(hpPct*100)}% PV (+${hpG}). Attaques rechargées !`);
+  notify('Repos ! ⏳30s');
+  // Countdown display on button
+  const btn = document.querySelector('#action-btns .btn.green');
+  if (btn) {
+    btn.disabled = true;
+    let t = 30;
+    btn.textContent = `🏥 CENTRE (${t}s)`;
+    const iv = setInterval(()=>{
+      t--;
+      if (t <= 0) { clearInterval(iv); btn.disabled=false; btn.textContent='🏥 CENTRE'; }
+      else btn.textContent = `🏥 CENTRE (${t}s)`;
+    }, 1000);
+  }
+}
+
+// ══════════════════════════════════════════
+// BATTLE
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// TABLEAU DES TYPES (Gen 1-6 complet)
+// mult: 2=super efficace, 0.5=pas très efficace, 0=immunité
+// ══════════════════════════════════════════
+const TYPE_CHART = {
+  Normal:   { Roche:0.5, Acier:0.5, Spectre:0 },
+  Feu:      { Feu:0.5, Eau:0.5, Roche:0.5, Dragon:0.5, Plante:2, Glace:2, Insecte:2, Acier:2 },
+  Eau:      { Eau:0.5, Plante:0.5, Dragon:0.5, Feu:2, Sol:2, Roche:2 },
+  Électrik: { Électrik:0.5, Plante:0.5, Dragon:0.5, Sol:0, Eau:2, Vol:2 },
+  Plante:   { Feu:0.5, Plante:0.5, Poison:0.5, Vol:0.5, Insecte:0.5, Dragon:0.5, Acier:0.5, Eau:2, Sol:2, Roche:2 },
+  Glace:    { Eau:0.5, Glace:0.5, Feu:2, Combat:2, Roche:2, Acier:2, Plante:2, Dragon:2, Vol:2, Sol:2 },
+  Combat:   { Poison:0.5, Insecte:0.5, Psy:0.5, Vol:0.5, Fée:0.5, Normal:2, Glace:2, Roche:2, Acier:2, Ténèbres:2, Spectre:0 },
+  Poison:   { Poison:0.5, Sol:0.5, Roche:0.5, Spectre:0.5, Acier:0, Plante:2, Fée:2 },
+  Sol:      { Plante:0.5, Insecte:0.5, Électrik:0, Feu:2, Poison:2, Roche:2, Acier:2 },
+  Vol:      { Électrik:0.5, Roche:0.5, Acier:0.5, Sol:0, Plante:2, Combat:2, Insecte:2 },
+  Psy:      { Psy:0.5, Acier:0.5, Ténèbres:0, Combat:2, Poison:2 },
+  Insecte:  { Feu:0.5, Combat:0.5, Vol:0.5, Spectre:0.5, Acier:0.5, Fée:0.5, Plante:2, Psy:2, Ténèbres:2 },
+  Roche:    { Combat:0.5, Sol:0.5, Acier:0.5, Feu:2, Glace:2, Insecte:2, Vol:2 },
+  Spectre:  { Normal:0, Combat:0, Spectre:2, Psy:2, Ténèbres:0.5 },
+  Dragon:   { Acier:0.5, Fée:0, Dragon:2 },
+  Ténèbres: { Combat:0.5, Ténèbres:0.5, Fée:0.5, Psy:2, Spectre:2 },
+  Acier:    { Feu:0.5, Eau:0.5, Électrik:0.5, Acier:0.5, Plante:2, Glace:2, Roche:2, Fée:2 },
+  Fée:      { Feu:0.5, Poison:0.5, Acier:0.5, Combat:2, Dragon:2, Ténèbres:2 },
+};
+
+function getEffectiveness(atkType, defType) {
+  if (!atkType || !defType) return 1;
+  const row = TYPE_CHART[atkType];
+  if (!row) return 1;
+  return row[defType] !== undefined ? row[defType] : 1;
+}
+
+function getEffLabel(mult) {
+  if (mult === 0)  return { label:"Ça n'a aucun effet…",        color:'#888888' };
+  if (mult >= 2)   return { label:'C\'est super efficace ! 🔥', color:'#ff4500' };
+  if (mult <= 0.5) return { label:'Ce n\'est pas très efficace…', color:'#4cc9f0' };
+  return { label:'', color:'' };
+}
+
+// Type de l'attaque de base selon le type du pokémon (simplifié)
+function getAttackType(pokemonType) { return pokemonType; }
+
+// ══════════════════════════════════════════
+// PRE-BATTLE TEAM SELECTOR
+// ══════════════════════════════════════════
+let pendingEnemyData = null;
+
+function showPreBattleMenu(enemyData) {
+  // Sync le pokémon actif avant le combat (respecte activeRosterIdx choisi depuis l'écran Équipe)
+  if (player && player.roster && player.roster.length > 0) {
+    syncPlayerFromActive();
+  }
+  startBattle(enemyData);
+}
+
+function closePreBattleMenu() {
+  document.getElementById('pre-battle-menu').style.display = 'none';
+  pendingEnemyData = null;
+}
+
+function cancelPreBattle() {
+  closePreBattleMenu();
+  setMessage('🌿 Vous évitez prudemment le Pokémon sauvage...');
+}
+
+function startBattle(enemyData) {
+  enemy = { ...enemyData, maxHp: enemyData.hp };
+  const activePoke = getActivePoke();
+  const playerShiny = activePoke?.isShiny || false;
+  document.getElementById('b-player-name').textContent = player.currentName + (playerShiny ? ' ✨' : '');
+  document.getElementById('b-player-level').textContent = 'Niv.'+player.level;
+  document.getElementById('b-enemy-name').textContent = enemy.name;
+  document.getElementById('b-enemy-level').textContent = 'Niv.'+enemy.level;
+  // Speed display
+  const pSpdEl = document.getElementById('b-player-spd');
+  const eSpdEl = document.getElementById('b-enemy-spd');
+  if(pSpdEl) pSpdEl.textContent = '⚡'+player.spd;
+  if(eSpdEl) eSpdEl.textContent = '⚡'+enemy.spd;
+  // Type badges (support dual types)
+  const pTypeBadge = document.getElementById('b-player-type');
+  const eTypeBadge = document.getElementById('b-enemy-type');
+  const playerDual = player.dualType || getPokeType(player.currentSpriteId, player.type);
+  const enemyDual  = getPokeType(enemy.id, enemy.type);
+  enemy.dualType   = enemyDual;
+  if (playerDual.includes('/')) {
+    const [t1,t2] = playerDual.split('/');
+    pTypeBadge.innerHTML = `<span class="poke-type-badge type-${t1}" style="margin-right:2px">${t1}</span><span class="poke-type-badge type-${t2}">${t2}</span>`;
+    pTypeBadge.className = '';
+  } else {
+    pTypeBadge.textContent = playerDual;
+    pTypeBadge.className = 'poke-type-badge type-'+playerDual;
+  }
+  if (enemyDual.includes('/')) {
+    const [t1,t2] = enemyDual.split('/');
+    eTypeBadge.innerHTML = `<span class="poke-type-badge type-${t1}" style="margin-right:2px">${t1}</span><span class="poke-type-badge type-${t2}">${t2}</span>`;
+    eTypeBadge.className = '';
+  } else {
+    eTypeBadge.textContent = enemyDual;
+    eTypeBadge.className = 'poke-type-badge type-'+enemyDual;
+  }
+  // Matchup hint basé sur les éléments des attaques
+  const myMult  = getEffectiveness(player.moveElem||player.type, enemy.type);
+  const myMult2 = getEffectiveness(player.mMoveElem||player.type, enemy.type);
+  const hisMult = getEffectiveness(enemy.type, player.type);
+  let matchupHint = '';
+  if (myMult >= 2)   matchupHint += ` ✅ ${player.move} super efficace !`;
+  if (myMult2 >= 2 && myMult2 !== myMult) matchupHint += ` ✅ ${player.mMove} super efficace !`;
+  if (myMult === 0)  matchupHint += ` ⚫ ${player.move} sans effet !`;
+  if (myMult <= 0.5 && myMult > 0) matchupHint += ` ⚠ ${player.move} peu efficace.`;
+  if (hisMult >= 2)  matchupHint += ` ❗ Ennemi super efficace !`;
+  document.getElementById('player-battle-img').src = playerShiny ? SPRITE_SHINY(player.currentSpriteId) : SPRITE_FRONT(player.currentSpriteId);
+  document.getElementById('enemy-battle-img').src = enemy.isShiny ? SPRITE_SHINY(enemy.id) : SPRITE_FRONT(enemy.id);
+  document.getElementById('btn-attack').innerHTML = `⚔ ${player.move} <span class="atk-elem-badge elem-${player.moveElem||player.type}">${player.moveElem||player.type}</span>`;
+  document.getElementById('btn-magic').innerHTML = `✨ ${player.mMove} <span class="atk-elem-badge elem-${player.mMoveElem||player.type}">${player.mMoveElem||player.type}</span>`;
+  updateBattleHp(); disableBattleButtons(false);
+  const shinyBadge = enemy.isShiny ? ' ✨' : '';
+  document.getElementById('b-enemy-name').textContent = enemy.name + shinyBadge;
+  document.getElementById('battle-log').textContent = `${enemy.isShiny ? '✨ OH ! Un Pokémon SHINY apparaît ! ' : '⚡ Un '}${enemy.name} (${enemy.type}) sauvage apparaît !${matchupHint}`;
+  document.getElementById('catch-display').classList.remove('active');
+  // Init tour-par-tour — l'ennemi attaque en premier s'il est plus rapide
+  battleBusy = false;
+  if ((enemy.spd||50) > player.spd) {
+    document.getElementById('battle-turn-info').textContent = '🔴 L\'ennemi attaque en premier !';
+    disableBattleButtons(true);
+    setTimeout(()=>{
+      setBattleTurn('enemy');
+    }, 800);
+  } else {
+    setBattleTurn('player');
+  }
+  showScreen('battle');
+}
+
+function updateBattleHp() {
+  const pPct = Math.max(0,(player.hp/player.maxHp)*100);
+  const ePct = Math.max(0,(enemy.hp/enemy.maxHp)*100);
+  const barColor = pct => pct > 50 ? 'linear-gradient(90deg,#2dc653,#06d6a0)' : pct > 20 ? 'linear-gradient(90deg,#ffd60a,#ff9a3c)' : 'linear-gradient(90deg,#e63946,#ff6b9d)';
+  const pBar = document.getElementById('b-hp-player');
+  const eBar = document.getElementById('b-hp-enemy');
+  pBar.style.width = pPct+'%'; pBar.style.background = barColor(pPct);
+  eBar.style.width = ePct+'%'; eBar.style.background = barColor(ePct);
+  document.getElementById('b-hp-player-text').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+  document.getElementById('b-hp-enemy-text').textContent = `${Math.ceil(enemy.hp)} / ${enemy.maxHp}`;
+}
+
+// ── TURN-BASED BATTLE STATE ──
+let battleTurn = 'player'; // 'player' or 'enemy'
+let battleBusy = false;
+
+function setBattleTurn(turn) {
+  battleTurn = turn;
+  const logEl = document.getElementById('battle-log');
+  if (turn === 'player') {
+    disableBattleButtons(false);
+    const turnInfo = document.getElementById('battle-turn-info');
+    if(turnInfo) turnInfo.textContent = '🟢 Votre tour !';
+  } else {
+    disableBattleButtons(true);
+    const turnInfo = document.getElementById('battle-turn-info');
+    if(turnInfo) turnInfo.textContent = '🔴 Tour ennemi…';
+    // Enemy attacks after delay
+    setTimeout(()=>{
+      if (!enemy || !player) return;
+      const eMult = getEffectiveness(enemy.type, player.type);
+      const eBase = Math.max(1, enemy.atk+Math.floor(Math.random()*5)-Math.floor(player.def/2));
+      const eDmg  = Math.round(eBase * eMult);
+      const eEff  = getEffLabel(eMult);
+      player.hp -= eDmg;
+      playAttackAnim('normal', true);
+      hurtSprite('player-battle-img');
+      let log = `${enemy.name} attaque`;
+      if (eEff.label) log += ` — ${eEff.label}`;
+      log += ` pour ${eDmg} dégâts !`;
+      if (player.hp<=0) {
+        player.hp=0; updateBattleHp(); updateHUD();
+        syncActiveFromPlayer();
+        document.getElementById('battle-log').textContent=`💀 ${player.currentName} est K.O. !`;
+        // Check if there's another pokemon alive in roster
+        const aliveIdx = player.roster ? player.roster.findIndex((p,i)=>i!==(player.activeRosterIdx||0) && p.hp > 0) : -1;
+        if (aliveIdx >= 0) {
+          setTimeout(()=>{
+            document.getElementById('battle-log').textContent=`💀 ${player.currentName} est K.O. ! Choisissez un autre Pokémon !`;
+            openSwitchMenu(true); // forced switch
+          }, 1500);
+        } else {
+          setTimeout(()=>{ disableBattleButtons(false); player.hp=Math.floor(player.maxHp*.3); if(player.roster) player.roster[player.activeRosterIdx||0].hp=player.hp; showScreen('game'); updateHUD(); setMessage(`${player.currentName} s'est évanoui… Vous vous réveillez sur la plage.`); }, 2000);
+        }
+        return;
+      }
+      document.getElementById('battle-log').textContent=log;
+      updateBattleHp(); updateHUD();
+      battleBusy = false;
+      setBattleTurn('player');
+    }, 1000);
+  }
+}
+
+function battleAction(action) {
+  if (!enemy||!player) return;
+  if (battleTurn !== 'player' || battleBusy) return;
+
+  let log='';
+
+  if (action==='flee') {
+    // Fuite : vitesse joueur vs ennemi
+    const fleeChance = Math.min(0.9, 0.35 + (player.spd - (enemy.spd||50)) / 200);
+    if (Math.random()<fleeChance){ syncActiveFromPlayer(); showScreen('game'); setMessage('💨 Vous fuyez le combat !'); updateHUD(); return; }
+    else log='💨 Impossible de fuir ! ';
+    document.getElementById('battle-log').textContent=log;
+    setBattleTurn('enemy');
+    return;
+  } else if (action==='item') {
+    const totalPotions = (player.bag.potion||0)+(player.bag.superpotion||0)+(player.bag.hyperpotion||0);
+    if (totalPotions>0) {
+      let heal=0, used='';
+      if (player.bag.hyperpotion>0){ heal=120; player.bag.hyperpotion--; used='Hyper Potion'; }
+      else if (player.bag.superpotion>0){ heal=60; player.bag.superpotion--; used='Super Potion'; }
+      else { heal=30; player.bag.potion--; used='Potion'; }
+      player.hp = Math.min(player.maxHp, player.hp+heal);
+      log=`🧪 ${used} utilisée sur ${player.currentName} ! +${heal} PV. `;
+    } else { log='🧪 Plus de Potions ! '; document.getElementById('battle-log').textContent=log; return; }
+    updateBattleHp(); updateHUD();
+    document.getElementById('battle-log').textContent=log;
+    setBattleTurn('enemy');
+    return;
+  } else {
+    let dmg=0;
+    if (action==='magic') {
+      const atkType = player.mMoveElem || player.type;
+      const mult = getEffectiveness(atkType, enemy.type);
+      const effInfo = getEffLabel(mult);
+      const base = Math.max(1, player.magic + Math.floor(Math.random()*8) - Math.floor(enemy.def/2));
+      dmg = Math.round(base * mult);
+      playAttackAnim(player.animType, false);
+      log=`✨ ${player.currentName} utilise ${player.mMove} (${atkType}) ! `;
+      if (effInfo.label) log += effInfo.label + ' ';
+      log += dmg > 0 ? `${dmg} dégâts.` : '';
+      if (effInfo.label && effInfo.color) setTimeout(()=>{ const el=document.getElementById('battle-log'); el.style.color=effInfo.color; setTimeout(()=>el.style.color='',800); },50);
+    } else {
+      const atkType = player.moveElem || player.type;
+      const mult = getEffectiveness(atkType, enemy.type);
+      const effInfo = getEffLabel(mult);
+      const base = Math.max(1, player.atk + Math.floor(Math.random()*6) - enemy.def);
+      dmg = Math.round(base * mult);
+      playAttackAnim(player.animType, false);
+      log=`⚔ ${player.currentName} utilise ${player.move} (${atkType}) ! `;
+      if (effInfo.label) log += effInfo.label + ' ';
+      log += dmg > 0 ? `${dmg} dégâts.` : '';
+      if (effInfo.label && effInfo.color) setTimeout(()=>{ const el=document.getElementById('battle-log'); el.style.color=effInfo.color; setTimeout(()=>el.style.color='',800); },50);
+    }
+    enemy.hp -= dmg;
+    if (dmg>0) hurtSprite('enemy-battle-img');
+  }
+
+  if (enemy.hp <= 0) {
+    enemy.hp=0; updateBattleHp();
+    const xpG=enemy.xp * 3, goldG=enemy.gold+Math.floor(Math.random()*10);
+    player.xp+=xpG; player.gold+=goldG;
+    // XP pour tout le roster (50% au bench)
+    if (player.roster) player.roster.forEach((p,i)=>{ if(i!==(player.activeRosterIdx||0) && p.hp>0){ p.xp=(p.xp||0)+Math.floor(xpG*0.5); } });
+    // Compteur kills par zone
+    if (!player.zoneKills) player.zoneKills = {};
+    const curZ = player.currentZone || 'bourg-palette';
+    player.zoneKills[curZ] = (player.zoneKills[curZ]||0)+1;
+    const kills = player.zoneKills[curZ];
+    const killNeeded = 15;
+    const killMsg = kills < killNeeded ? ` (${kills}/${killNeeded} Pokémon vaincus ici)` : kills===killNeeded ? ` 🔓 Zone débloquée ! Vous pouvez voyager !` : '';
+    document.getElementById('battle-log').textContent = `🏆 ${player.currentName} a vaincu ${enemy.name} ! +${xpG} XP +${goldG}₽ !${killMsg}`;
+    disableBattleButtons(true); checkLevelUp();
+    setTimeout(()=>{ disableBattleButtons(false); syncActiveFromPlayer(); showScreen('game'); updateHUD(); setMessage(`${player.currentName} a mis K.O. le ${enemy.name} !${killMsg}`); }, 1800);
+    return;
+  }
+
+  // Determine turn order by speed
+  document.getElementById('battle-log').textContent=log;
+  updateBattleHp(); updateHUD();
+  // Refresh attack use counts on buttons
+  document.getElementById('btn-attack').innerHTML = `⚔ ${player.move} <span class="atk-elem-badge elem-${player.moveElem||player.type}">${player.moveElem||player.type}</span>`;
+  document.getElementById('btn-magic').innerHTML  = `✨ ${player.mMove} <span class="atk-elem-badge elem-${player.mMoveElem||player.type}">${player.mMoveElem||player.type}</span>`;
+
+  // Player attacked — now check if enemy is faster for next turn or just pass to enemy
+  battleBusy = true;
+  disableBattleButtons(true);
+  setBattleTurn('enemy');
+}
+
+// ── ATTACK ANIMATIONS ──
+function playAttackAnim(type, fromEnemy) {
+  const layer = document.getElementById('anim-layer');
+  layer.innerHTML = '';
+  const startX = fromEnemy ? '70%' : '25%';
+  const endX   = fromEnemy ? '25%' : '70%';
+
+  const configs = {
+    fire:   { count:12, colors:['#ff4500','#ff8c00','#ffd700','#ff6347'], shape:'●', animName:'flameAnim',   dur:'0.7s' },
+    water:  { count:10, colors:['#4cc9f0','#00b4d8','#0077b6','#90e0ef'], shape:'◉', animName:'waterAnim',   dur:'0.6s' },
+    leaf:   { count:10, colors:['#2dc653','#80b918','#a7c957','#38b000'], shape:'♦', animName:'leafAnim',    dur:'0.7s' },
+    normal: { count:8,  colors:['#ffffff','#e0e0e0','#ffd60a'],           shape:'★', animName:'normalAnim',  dur:'0.5s' },
+    thunder:{ count:6,  colors:['#ffd60a','#ffff00','#ffa500'],           shape:'⚡', animName:'thunderAnim', dur:'0.4s' },
+  };
+  const cfg = configs[type] || configs.normal;
+
+  for (let i=0; i<cfg.count; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;font-size:${14+Math.random()*16}px;color:${cfg.colors[Math.floor(Math.random()*cfg.colors.length)]};left:${fromEnemy?60+Math.random()*15:20+Math.random()*15}%;top:${30+Math.random()*40}%;animation:${cfg.animName} ${cfg.dur} ease ${i*0.05}s forwards;pointer-events:none;z-index:25;text-shadow:0 0 8px currentColor`;
+    el.textContent = cfg.shape;
+    layer.appendChild(el);
+  }
+  setTimeout(()=>layer.innerHTML='', 900);
+}
+
+function hurtSprite(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('sprite-hurt');
+  void el.offsetWidth;
+  el.classList.add('sprite-hurt');
+  setTimeout(()=>el.classList.remove('sprite-hurt'), 500);
+}
+
+function disableBattleButtons(dis){ document.querySelectorAll('#battle-actions .btn').forEach(b=>b.disabled=dis); }
+
+// ── CATCH MENU ──
+function openCatchMenu() {
+  if (!player||!enemy) return;
+  const list = document.getElementById('catch-ball-list');
+  list.innerHTML = '';
+  const ballTypes = ['pokeball','superball','hyperball','masterball'];
+  let hasBalls = false;
+  ballTypes.forEach(b => {
+    const qty = player.balls[b]||0;
+    if (qty<=0) return;
+    hasBalls = true;
+    const item = SHOP_ITEMS.find(i=>i.id===b);
+    if (!item) return;
+    const div = document.createElement('div');
+    div.className='shop-item';
+    div.innerHTML=`<img src="${item.img}" style="width:32px;height:32px;image-rendering:pixelated"><div class="shop-item-info"><div class="shop-item-name">${item.name}</div><div class="shop-item-desc">${item.desc} · En stock: ${qty}</div></div><button class="shop-item-btn" onclick="throwBall('${b}')">Lancer</button>`;
+    list.appendChild(div);
+  });
+  if (!hasBalls) { list.innerHTML='<div style="font-family:\'Press Start 2P\',monospace;font-size:.5rem;color:rgba(255,255,255,.6);text-align:center;padding:1rem">Aucune Poké Ball !</div>'; }
+  document.getElementById('catch-menu').style.display='flex';
+}
+function closeCatchMenu(){ document.getElementById('catch-menu').style.display='none'; }
+
+function throwBall(ballId) {
+  closeCatchMenu();
+  if (!player.balls[ballId]||player.balls[ballId]<=0){ notify('Plus de '+ballId+' !'); return; }
+  player.balls[ballId]--;
+  const item = SHOP_ITEMS.find(i=>i.id===ballId);
+  const ballImg = item ? item.img : '';
+
+  disableBattleButtons(true);
+  document.getElementById('battle-log').textContent = `⚽ Vous lancez une ${item.name} sur ${enemy.name} !`;
+
+  // Calcul taux de capture
+  const hpRatio = enemy.hp / enemy.maxHp; // moins de vie = plus facile
+  const baseRate = 0.15;
+  const hpBonus  = (1 - hpRatio) * 0.55;  // jusqu'à +55% si presque K.O.
+  const ballBonus= item.catchRate;
+  let catchChance = Math.min(0.98, (baseRate + hpBonus) * ballBonus);
+  if (item.catchRate >= 999) catchChance = 1.0;
+
+  // Afficher animation
+  const catchDiv = document.getElementById('catch-display');
+  const catchBall = document.getElementById('catch-ball-anim');
+  const catchResult = document.getElementById('catch-result');
+  catchBall.style.backgroundImage=`url(${ballImg})`;
+  catchBall.textContent='';
+  catchBall.style.cssText=`width:48px;height:48px;background:url(${ballImg}) center/contain no-repeat`;
+  catchResult.textContent='';
+  catchDiv.classList.add('active');
+
+  setTimeout(()=>{
+    const success = Math.random() < catchChance;
+    if (success) {
+      catchBall.style.animation='pokeballCatch 1s ease forwards';
+      catchResult.textContent = `✓ ${enemy.name} a été capturé !`;
+      catchResult.style.color='var(--green)';
+      addCapturedToRoster({ name:enemy.name, id:enemy.id, type:enemy.type, hp:enemy.maxHp, maxHp:enemy.maxHp, level:enemy.level||1, isShiny:enemy.isShiny||false });
+      setTimeout(()=>{
+        catchDiv.classList.remove('active');
+        disableBattleButtons(false);
+        showScreen('game');
+        updateHUD();
+        const shinyCapture = enemy.isShiny ? ' ✨ Et en plus il est SHINY !' : '';
+        setMessage(`🎉 Félicitations ! Vous avez capturé ${enemy.name} ! (${Math.round(catchChance*100)}% de chance)${shinyCapture}`);
+        notify(`${enemy.name} capturé !${enemy.isShiny?' ✨':''}`);
+      }, 1800);
+    } else {
+      catchBall.style.animation='captureFail 1s ease forwards';
+      catchResult.textContent = `✗ ${enemy.name} s'est échappé ! (${Math.round(catchChance*100)}%)`;
+      catchResult.style.color='var(--red)';
+      // Enemy counterattack after failed catch
+      const eDmg = Math.max(1, enemy.atk+Math.floor(Math.random()*5)-Math.floor(player.def/2));
+      player.hp -= eDmg;
+      setTimeout(()=>{
+        catchDiv.classList.remove('active');
+        disableBattleButtons(false);
+        if (player.hp<=0){
+          player.hp=Math.floor(player.maxHp*.2);
+          showScreen('game'); updateHUD(); setMessage(`${enemy.name} s'est échappé et vous a mis K.O. !`);
+        } else {
+          document.getElementById('battle-log').textContent=`${enemy.name} s'échappe et attaque pour ${eDmg} dégâts !`;
+          updateBattleHp(); updateHUD();
+          battleBusy = false;
+          setBattleTurn('player');
+        }
+      }, 1500);
+    }
+  }, 800);
+}
+
+// ══════════════════════════════════════════
+// LEVEL UP + EVOLUTION
+// ══════════════════════════════════════════
+function checkLevelUp() {
+  while (player.xp >= player.xpNext) {
+    player.xp -= player.xpNext;
+    player.level++;
+    player.xpNext = Math.floor(player.xpNext * 1.45);
+    player.maxHp += 14; player.hp = player.maxHp;
+    player.maxMp += 8;  player.mp = player.maxMp;
+    player.atk+=3; player.def+=2; player.magic+=2; player.spd+=1;
+    // Recharge les utilisations d'attaques au level up — ILLIMITÉ en combat
+    player.moveUses = player.moveUsesMax || 6;
+    player.mMoveUses = player.mMoveUsesMax || 4;
+    syncActiveFromPlayer();
+    notify(`⬆ ${player.currentName} → Niveau ${player.level} !`);
+    // Check for new learnable moves at this level
+    const lvlMoves = (LEVEL_UP_MOVES[player.type] || LEVEL_UP_MOVES['Normal']).filter(m => m.lv === player.level && MOVES_DB[m.move]);
+    if (lvlMoves.length > 0) {
+      setTimeout(()=> notify(`📚 ${player.currentName} peut apprendre ${lvlMoves.map(m=>m.move).join(', ')} ! (Équipe > Détails)`), 1200);
+    }
+    checkEvolution();
+  }
+  syncActiveFromPlayer();
+}
+
+function checkEvolution() {
+  const chain = EVO_CHAINS[player.currentSpriteId];
+  if (chain && player.level >= chain.level) {
+    triggerEvolution(chain);
+  }
+}
+
+function triggerEvolution(chain) {
+  const oldName = player.currentName;
+  player.currentSpriteId = chain.next;
+  player.currentName = chain.name;
+  player.maxHp += 20; player.hp = player.maxHp;
+  player.maxMp += 10; player.mp = player.maxMp;
+  player.atk+=5; player.def+=4; player.magic+=4;
+
+  const evoScreen = document.getElementById('evo-screen');
+  document.getElementById('evo-sprite').src = SPRITE_FRONT(chain.next);
+  document.getElementById('evo-text').textContent = `${oldName} évolue\nen ${chain.name} !`;
+  evoScreen.classList.add('active');
+  evoScreen.style.display='flex';
+  notify(`🌟 ${oldName} → ${chain.name} !`);
+}
+
+function closeEvo() {
+  const evoScreen = document.getElementById('evo-screen');
+  evoScreen.classList.remove('active');
+  evoScreen.style.display='none';
+  updateHUD();
+  if (player.currentSpriteId) {
+    document.getElementById('player-name-hud').textContent = `${player.currentName} de ${player.name} ✦ Niv.${player.level}`;
+  }
+}
+
+// ══════════════════════════════════════════
+// INVENTORY
+// ══════════════════════════════════════════
+function switchInvTab(tab) {
+  document.querySelectorAll('.inv-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('inv-panel-stats').style.display='none';
+  document.getElementById('inv-panel-bag').style.display='none';
+  if (tab==='stats') {
+    document.querySelector('.inv-tab:nth-child(1)').classList.add('active');
+    document.getElementById('inv-panel-stats').style.display='block';
+  } else {
+    document.querySelector('.inv-tab:nth-child(2)').classList.add('active');
+    document.getElementById('inv-panel-bag').style.display='block';
+  }
+}
+
+function renderInventory() {
+  if (!player) return;
+  // STATS
+  const stats = document.getElementById('stat-list');
+  stats.innerHTML=[
+    ['Pokémon',player.currentName],['Type',player.type||'—'],
+    ['Niveau',player.level],['PV',`${Math.ceil(player.hp)} / ${player.maxHp}`],
+    ['XP',`${player.xp} / ${player.xpNext}`],
+    ['Attaque',player.atk],['Défense',player.def],
+    ['Capacité Spé.',player.magic],['Vitesse',player.spd],
+    [`${player.move||'Attaque'} (${player.moveElem||player.type})`,`${player.moveUses||0}/${player.moveUsesMax||6} util.`],
+    [`${player.mMove||'Capacité'} (${player.mMoveElem||player.type})`,`${player.mMoveUses||0}/${player.mMoveUsesMax||4} util.`],
+    ['Zone actuelle', ZONES[player.currentZone]?.name || player.currentZone],
+    ['Victoires zone', `${(player.zoneKills||{})[player.currentZone]||0}/15`],
+    ['Pokédollars',player.gold],
+  ].map(([k,v])=>`<div class="stat-row"><span>${k}</span><span>${v}</span></div>`).join('');
+
+  // BAG
+  const grid = document.getElementById('item-grid');
+  const allItems = [];
+  // Potions
+  const potionKeys = ['potion','superpotion','hyperpotion'];
+  potionKeys.forEach(k=>{ if (player.bag[k]>0) allItems.push({key:k,qty:player.bag[k]}); });
+  // Balls
+  const ballKeys = ['pokeball','superball','hyperball','masterball'];
+  ballKeys.forEach(k=>{ if (player.balls[k]>0) allItems.push({key:k,qty:player.balls[k]}); });
+  // CTs
+  const ctKeys = Object.entries(player.ctBag||{}).filter(([,qty])=>qty>0);
+  ctKeys.forEach(([id, qty]) => {
+    const ct = CT_LIST.find(c=>c.id===id);
+    if (ct) allItems.push({key:id, qty, customName:ct.name, customImg:ct.img});
+  });
+  // Starting items
+  if (player.items) player.items.forEach(i=>{ if (i.q>0) allItems.push({key:i.img, qty:i.q, customName:i.n}); });
+
+  if (allItems.length===0) { grid.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:.8rem">Sac vide…</div>'; return; }
+
+  grid.innerHTML = allItems.map(({key,qty,customName,customImg})=>{
+    const d = ITEM_DISPLAY[key]||{ name:customName||key, img:customImg||'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/potion.png' };
+    return `<div class="item-card"><img src="${customImg||d.img}" alt="${d.name}"/><div class="item-card-name">${customName||d.name}</div><div class="item-card-qty">x${qty}</div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// TEAM
+// ══════════════════════════════════════════
+function renderTeam() {
+  if (!player) return;
+  const container = document.getElementById('team-display');
+  const allPoke = player.roster && player.roster.length > 0
+    ? player.roster.map((p,i)=>({ ...p, isMain: i === (player.activeRosterIdx||0), fromRoster:true, rosterIdx:i }))
+    : [
+        { name:player.currentName, id:player.currentSpriteId, type:player.type, level:player.level, hp:player.hp, maxHp:player.maxHp, isMain:true },
+        ...(player.team||[])
+      ];
+  if (allPoke.length===0){ container.innerHTML='<div style="color:rgba(255,255,255,.4);font-family:\'Press Start 2P\',monospace;font-size:.5rem">Équipe vide</div>'; return; }
+  container.innerHTML = allPoke.map(p=>{
+    const spriteId = p.currentSpriteId || p.spriteId || p.id;
+    const imgSrc = p.isShiny ? SPRITE_SHINY(spriteId) : SPRITE_FRONT(spriteId);
+    const dual = p.dualType || getPokeType(spriteId, p.type);
+    const typeBadges = dual.includes('/') 
+      ? dual.split('/').map(t=>`<span class="poke-type-badge type-${t}">${t}</span>`).join(' ')
+      : `<span class="poke-type-badge type-${dual}">${dual}</span>`;
+    const hpPct = Math.max(0, Math.round((p.hp/p.maxHp)*100));
+    const isActive = p.isMain;
+    const shinyBadge = p.isShiny ? ' <span style="color:#ffd700;text-shadow:0 0 6px #ffd700">★</span>' : '';
+    const selectBtn = (!isActive && p.hp > 0 && p.fromRoster)
+      ? `<button onclick="selectLeadFromTeam(${p.rosterIdx})" style="font-family:'Press Start 2P',monospace;font-size:.35rem;padding:.3rem .7rem;background:linear-gradient(180deg,#06d6a0,#048a68);color:#fff;border:2px solid rgba(255,255,255,.3);border-radius:6px;cursor:pointer;box-shadow:0 2px 0 #024534;margin-top:.3rem">⚡ CHOISIR</button>`
+      : '';
+    return `
+    <div class="pokemon-card" style="${isActive?'border-color:var(--green);box-shadow:0 0 12px rgba(45,198,83,.3)':''}${p.isShiny?';border-color:#ffd700;box-shadow:0 0 16px rgba(255,215,0,.4)':''}">
+      <img src="${imgSrc}" alt="${p.currentName||p.name}" style="${p.isShiny?'filter:drop-shadow(0 0 8px #ffd700)':''}"/>
+      <div class="poke-card-name">${p.currentName||p.name}${shinyBadge}${isActive?' ✦':''}</div>
+      <div class="poke-card-level">Niv. ${p.level}${p.isShiny?' · ✨Shiny':''}</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin:.2rem 0">${typeBadges}</div>
+      ${p.atk ? `<div style="font-size:.58rem;color:rgba(255,255,255,.45);line-height:1.7">ATQ:${p.atk} DEF:${p.def} VIT:${p.spd}</div>` : ''}
+      <div style="margin-top:.3rem;width:100%;height:6px;background:rgba(0,0,0,.3);border-radius:999px;overflow:hidden"><div style="height:100%;background:${hpPct>50?'linear-gradient(90deg,#2dc653,#06d6a0)':hpPct>20?'linear-gradient(90deg,#ffd60a,#ff9a3c)':'linear-gradient(90deg,#e63946,#ff6b9d)'};width:${hpPct}%;border-radius:999px;transition:width .4s"></div></div>
+      <div style="font-size:.65rem;color:rgba(255,255,255,.5);margin-top:.2rem">${Math.ceil(p.hp)} / ${p.maxHp} PV</div>
+      ${selectBtn}
+      <button onclick="openPokeDetail(${p.rosterIdx})" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:.25rem .6rem;background:linear-gradient(180deg,#4cc9f0,#1a8ab5);color:#fff;border:2px solid rgba(255,255,255,.3);border-radius:6px;cursor:pointer;box-shadow:0 2px 0 #0d3d5e;margin-top:.2rem">📊 DÉTAILS</button>
+    </div>`;
+  }).join('');
+}
+
+function selectLeadFromTeam(idx) {
+  if (!player.roster || idx < 0 || idx >= player.roster.length) return;
+  const target = player.roster[idx];
+  if (!target || target.hp <= 0) { notify(`${target?.currentName||'Ce Pokémon'} est K.O. !`); return; }
+  syncActiveFromPlayer();
+  player.activeRosterIdx = idx;
+  syncPlayerFromActive();
+  notify(`⚡ ${player.currentName} mène l'équipe !`);
+  renderTeam();
+  updateHUD();
+}
+
+// ══════════════════════════════════════════
+// SHOP
+// ══════════════════════════════════════════
+function renderShop() {
+  if (!player) return;
+  document.getElementById('shop-gold').textContent = player.gold;
+  const list = document.getElementById('shop-items-list');
+  const itemsHTML = SHOP_ITEMS.map(item=>`
+    <div class="shop-item">
+      <img src="${item.img}" alt="${item.name}"/>
+      <div class="shop-item-info">
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-desc">${item.desc}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+        <div class="shop-item-price">₽${item.price}</div>
+        <button class="shop-item-btn" onclick="buyItem('${item.id}')">Acheter</button>
+      </div>
+    </div>`).join('');
+  const ctHTML = `
+    <div style="font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--blue);margin:.7rem 0 .4rem;text-shadow:1px 1px 0 #000">📀 CAPSULES TECHNIQUES (CT)</div>
+    ${CT_LIST.map(ct=>{
+      const md = MOVES_DB[ct.move] || {};
+      const owned = (player.ctBag||{})[ct.id]||0;
+      return `<div class="shop-item" style="${owned>0?'border-color:rgba(76,201,240,.4)':''}">
+        <img src="${ct.img}" alt="${ct.name}" style="width:28px;height:28px"/>
+        <div class="shop-item-info">
+          <div class="shop-item-name" style="font-size:.38rem">${ct.name}</div>
+          <div class="shop-item-desc">${md.type||''} · Puis:${md.pow||'?'} · ${md.desc||''}</div>
+          ${owned>0?`<div style="font-size:.55rem;color:var(--green)">En inventaire: ${owned}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+          <div class="shop-item-price">₽${ct.price}</div>
+          <button class="shop-item-btn" onclick="buyCT('${ct.id}')">Acheter</button>
+        </div>
+      </div>`;
+    }).join('')}`;
+  list.innerHTML = itemsHTML + ctHTML;
+}
+
+function buyItem(itemId) {
+  if (!player) return;
+  const item = SHOP_ITEMS.find(i=>i.id===itemId);
+  if (!item) return;
+  if (player.gold < item.price){ notify('Pas assez de Pokédollars !'); return; }
+  player.gold -= item.price;
+  if (item.type==='ball') {
+    player.balls[itemId] = (player.balls[itemId]||0)+1;
+  } else if (item.type==='heal') {
+    player.bag[itemId] = (player.bag[itemId]||0)+1;
+  }
+  document.getElementById('shop-gold').textContent = player.gold;
+  updateHUD();
+  notify(`${item.name} acheté ! -${item.price}₽`);
+}
+
+function buyCT(ctId) {
+  if (!player) return;
+  const ct = CT_LIST.find(c => c.id === ctId);
+  if (!ct) return;
+  if (player.gold < ct.price) { notify('Pas assez de Pokédollars !'); return; }
+  player.gold -= ct.price;
+  if (!player.ctBag) player.ctBag = {};
+  player.ctBag[ctId] = (player.ctBag[ctId] || 0) + 1;
+  document.getElementById('shop-gold').textContent = player.gold;
+  updateHUD();
+  notify(`${ct.name} achetée ! -${ct.price}₽`);
+  renderShop();
+}
+
+// ══════════════════════════════════════════
+// SAVE / LOAD
+// ══════════════════════════════════════════
+function saveGame() {
+  if (!player) return;
+  localStorage.setItem('pokemonRPG_save_v2', JSON.stringify(player));
+  notify('Partie sauvegardée !');
+  setMessage('💾 Votre aventure a été sauvegardée.');
+}
+function loadGame() {
+  const data = localStorage.getItem('pokemonRPG_save_v2');
+  if (!data){ notify('Aucune sauvegarde !'); return; }
+  player = JSON.parse(data);
+  if (!player.balls)        player.balls        = { pokeball:3 };
+  if (!player.bag)          player.bag          = { potion:2 };
+  if (!player.ctBag)        player.ctBag        = {};
+  if (!player.team)         player.team         = [];
+  if (!player.roster)       { player.roster = []; player.activeRosterIdx = 0; }
+  if (player.roster.length === 0) {
+    // Migrate from old save — build roster from player data
+    const starterPoke = {
+      name: player.cls || player.currentName, currentName: player.currentName,
+      spriteId: player.spriteId, currentSpriteId: player.currentSpriteId,
+      type: player.type, dualType: getPokeType(player.currentSpriteId, player.type),
+      level: player.level, hp: player.hp, maxHp: player.maxHp,
+      mp: player.mp||50, maxMp: player.maxMp||50,
+      xp: player.xp, xpNext: player.xpNext,
+      atk: player.atk, def: player.def, spd: player.spd, magic: player.magic,
+      move: player.move, mMove: player.mMove, animType: player.animType||'normal',
+      moveElem: player.moveElem, mMoveElem: player.mMoveElem,
+      moveUses: player.moveUses||6, mMoveUses: player.mMoveUses||4,
+      moveUsesMax: player.moveUsesMax||6, mMoveUsesMax: player.mMoveUsesMax||4,
+      isMain: true,
+    };
+    player.roster = [starterPoke];
+    player.activeRosterIdx = 0;
+    // Add team pokemon to roster
+    (player.team||[]).forEach(t => addCapturedToRoster(t));
+  }
+  if (!player.currentZone)  player.currentZone  = 'bourg-palette';
+  if (!player.visitedZones) player.visitedZones = ['bourg-palette'];
+  if (!player.visitedZones.includes(player.currentZone))
+    player.visitedZones.push(player.currentZone);
+  if (!player.zoneKills)    player.zoneKills    = {};
+  if (player.moveUsesMax === undefined) { player.moveUsesMax=6; player.moveUses=6; }
+  if (player.mMoveUsesMax === undefined){ player.mMoveUsesMax=4; player.mMoveUses=4; }
+  if (!player.moveElem)     player.moveElem     = player.type;
+  if (!player.mMoveElem)    player.mMoveElem    = player.type;
+  // Sync active roster pokemon to player
+  if (player.roster.length > 0) syncPlayerFromActive();
+  showScreen('game'); updateHUD();
+  showZone(ZONES[player.currentZone]?.name || 'PokéQuest');
+  setMessage(`Bienvenue de retour, Dresseur ${player.name} ! ${player.currentName} reprend l'aventure !`);
+  drawMinimap();
+}
+
+// ══════════════════════════════════════════
+// NOTIFICATION
+// ══════════════════════════════════════════
+let notifTimer;
+function notify(msg) {
+  const el=document.getElementById('notif');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>el.classList.remove('show'),2400);
+}
+// ══════════════════════════════════════════
+// MAP — IMAGE + OVERLAY TRANSPARENT
+// Fond = kanto_map.png, zones = canvas overlay
+// ══════════════════════════════════════════
+
+// Zones positionnées en % sur l'image kanto_map.png (560×556px)
+// x/y = centre de la zone en %, w/h = taille en %
+// basé sur la Town Map PokéClicker screenshot
+const KANTO_ZONES = [
+  // Villes
+  {id:'bourg-palette',   x:14, y:80, w:10, h:6,  label:'Bourg-Palette', type:'city'},
+  {id:'jadielle',        x:14, y:62, w:10, h:6,  label:'Jadielle',      type:'city'},
+  {id:'argenta',         x:14, y:35, w:10, h:6,  label:'Argenta',       type:'city'},
+  {id:'brindibourg',     x:52, y:24, w:12, h:6,  label:'Brindibourg',   type:'city'},
+  {id:'azuria',          x:52, y:37, w:10, h:6,  label:'Azuria',        type:'city'},
+  {id:'lavanville',      x:67, y:51, w:10, h:6,  label:'Lavanville',    type:'city'},
+  {id:'celadopole',      x:38, y:52, w:10, h:6,  label:'Céladon',       type:'city'},
+  {id:'safrania',        x:56, y:43, w:10, h:6,  label:'Safrania',      type:'city'},
+  {id:'carmin-sur-mer',  x:52, y:65, w:10, h:6,  label:'Carmin',        type:'city'},
+  {id:'parmanie',        x:48, y:76, w:10, h:6,  label:'Parmanie',      type:'city'},
+  {id:'cramois-ile',     x:14, y:92, w:10, h:6,  label:'Cramois Île',   type:'city'},
+  // Ligue
+  {id:'ligue-pokemon',   x: 5, y:48, w: 9, h:6,  label:'Ligue',         type:'elite'},
+  // Routes
+  {id:'route-1',         x:14, y:71, w: 7, h:5,  label:'R.1',           type:'route'},
+  {id:'route-2',         x:14, y:49, w: 7, h:5,  label:'R.2',           type:'route'},
+  {id:'route-3',         x:30, y:35, w:10, h:5,  label:'R.3',           type:'route'},
+  {id:'route-4',         x:65, y:24, w:10, h:5,  label:'R.4',           type:'route'},
+  {id:'route-5',         x:52, y:31, w: 7, h:5,  label:'R.5',           type:'route'},
+  {id:'route-6',         x:52, y:58, w: 7, h:5,  label:'R.6',           type:'route'},
+  {id:'route-7',         x:44, y:52, w: 7, h:5,  label:'R.7',           type:'route'},
+  {id:'route-8',         x:52, y:43, w: 7, h:5,  label:'R.8',           type:'route'},
+  {id:'route-9',         x:61, y:37, w: 7, h:5,  label:'R.9',           type:'route'},
+  {id:'route-10',        x:61, y:43, w: 7, h:5,  label:'R.10',          type:'route'},
+  {id:'route-11',        x:61, y:58, w: 7, h:5,  label:'R.11',          type:'route'},
+  {id:'route-12',        x:70, y:60, w: 7, h:8,  label:'R.12',          type:'water'},
+  {id:'route-13',        x:72, y:70, w: 9, h:5,  label:'R.13',          type:'route'},
+  {id:'route-14',        x:79, y:76, w: 7, h:6,  label:'R.14',          type:'route'},
+  {id:'route-15',        x:61, y:78, w:10, h:5,  label:'R.15',          type:'route'},
+  {id:'route-16',        x:27, y:52, w: 8, h:5,  label:'R.16',          type:'route'},
+  {id:'route-19',        x:36, y:83, w: 8, h:5,  label:'R.19',          type:'water'},
+  {id:'route-20',        x:24, y:88, w: 8, h:5,  label:'R.20',          type:'water'},
+  {id:'route-21',        x:14, y:85, w: 7, h:6,  label:'R.21',          type:'water'},
+  {id:'route-22',        x: 6, y:60, w: 7, h:5,  label:'R.22',          type:'route'},
+  {id:'route-24',        x:52, y:17, w: 7, h:5,  label:'R.24',          type:'water'},
+  {id:'route-25',        x:63, y:13, w:10, h:5,  label:'R.25',          type:'route'},
+  // Grottes/Forêts
+  {id:'mt-lune',         x:41, y:32, w:10, h:7,  label:'Mt. Lune',      type:'cave'},
+  {id:'foret-jade',      x:22, y:43, w: 9, h:8,  label:'Forêt Jade',    type:'forest'},
+  {id:'grotte-azuria',   x:43, y:37, w: 8, h:6,  label:'G. Azuria',     type:'cave'},
+  {id:'iles-ecume',      x:24, y:83, w: 9, h:7,  label:'Îles Écume',    type:'cave'},
+];
+
+const ZONE_COLORS = {
+  city:   {fill:'rgba(240,168,64,0.18)',  stroke:'#F0A840', text:'#FFE090'},
+  route:  {fill:'rgba(80,200,80,0.12)',   stroke:'#50C850', text:'#A8E870'},
+  water:  {fill:'rgba(80,140,240,0.18)',  stroke:'#5090F0', text:'#98C8FF'},
+  cave:   {fill:'rgba(140,100,80,0.22)',  stroke:'#8C6450', text:'#C8A888'},
+  forest: {fill:'rgba(32,160,64,0.20)',   stroke:'#20A040', text:'#70D888'},
+  elite:  {fill:'rgba(232,64,64,0.22)',   stroke:'#E84040', text:'#FF9090'},
+};
+
+let selectedZoneId = null;
+let mapHitZones    = [];
+let mapAnimFrame   = null;
+let mapPulseT      = 0;
+
+function getZoneById(id){ return KANTO_ZONES.find(z=>z.id===id); }
+
+function renderMap() {
+  if (!player) return;
+  if (!player.visitedZones) player.visitedZones = ['bourg-palette'];
+
+  const wrap   = document.getElementById('map-canvas-wrap');
+  const canvas = document.getElementById('map-canvas');
+  const W = wrap.clientWidth  || 700;
+  const H = wrap.clientHeight || 520;
+  canvas.width  = W;
+  canvas.height = H;
+
+  mapHitZones = [];
+  if (mapAnimFrame) cancelAnimationFrame(mapAnimFrame);
+
+  function px(pct){ return pct/100 * W; }
+  function py(pct){ return pct/100 * H; }
+  function pw(pct){ return pct/100 * W; }
+  function ph(pct){ return pct/100 * H; }
+
+  // ── Dessin fond de carte Kanto stylisé ──
+  function drawMapBackground(ctx) {
+    // Fond océan
+    const seaGrad = ctx.createLinearGradient(0,0,W,H);
+    seaGrad.addColorStop(0,'#0e3460');
+    seaGrad.addColorStop(0.5,'#1a4a7a');
+    seaGrad.addColorStop(1,'#0d2a50');
+    ctx.fillStyle = seaGrad;
+    ctx.fillRect(0,0,W,H);
+
+    // Continent principal (forme de Kanto approximative)
+    ctx.save();
+    // Masse continentale
+    const landGrad = ctx.createLinearGradient(0,0,W,H);
+    landGrad.addColorStop(0,'#2d5a1b');
+    landGrad.addColorStop(0.3,'#3a7025');
+    landGrad.addColorStop(0.6,'#4a8a30');
+    landGrad.addColorStop(1,'#3a7025');
+    ctx.fillStyle = landGrad;
+    ctx.beginPath();
+    // Contour grossier du continent
+    ctx.moveTo(px(5),py(20));
+    ctx.lineTo(px(85),py(18));
+    ctx.lineTo(px(90),py(30));
+    ctx.lineTo(px(88),py(55));
+    ctx.lineTo(px(75),py(70));
+    ctx.lineTo(px(80),py(85));
+    ctx.lineTo(px(55),py(90));
+    ctx.lineTo(px(45),py(82));
+    ctx.lineTo(px(15),py(90));
+    ctx.lineTo(px(8),py(70));
+    ctx.lineTo(px(5),py(50));
+    ctx.closePath();
+    ctx.fill();
+
+    // Relief — zones montagneuses
+    ctx.fillStyle = 'rgba(100,80,50,0.25)';
+    ctx.beginPath(); ctx.arc(px(35),py(33),pw(6),0,Math.PI*2); ctx.fill(); // Mt Lune
+    ctx.beginPath(); ctx.arc(px(10),py(47),pw(4),0,Math.PI*2); ctx.fill(); // Ligue
+    ctx.beginPath(); ctx.arc(px(43),py(38),pw(5),0,Math.PI*2); ctx.fill(); // G Azuria
+
+    // Forêts
+    ctx.fillStyle = 'rgba(0,100,20,0.2)';
+    ctx.beginPath(); ctx.arc(px(22),py(43),pw(5),0,Math.PI*2); ctx.fill(); // Forêt Jade
+
+    // Routes (lignes fines)
+    ctx.strokeStyle = 'rgba(200,180,100,0.15)';
+    ctx.lineWidth = pw(0.6);
+    ctx.setLineDash([pw(1), pw(0.5)]);
+    // Quelques routes principales dessinées
+    const routes = [
+      [[14,80],[14,62]],[[14,62],[14,35]],[[14,35],[30,35]],[[30,35],[52,24]],
+      [[52,24],[65,24]],[[52,24],[52,31]],[[52,37],[52,43]],[[52,43],[56,43]],
+      [[52,37],[43,37]],[[52,65],[48,76]],[[48,76],[35,83]],[[35,83],[24,88]],
+    ];
+    routes.forEach(([a,b])=>{
+      ctx.beginPath(); ctx.moveTo(px(a[0]),py(a[1])); ctx.lineTo(px(b[0]),py(b[1])); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Eau/Rivières
+    ctx.strokeStyle = 'rgba(80,140,240,0.3)';
+    ctx.lineWidth = pw(0.8);
+    ctx.beginPath();
+    ctx.moveTo(px(52),py(17)); ctx.lineTo(px(63),py(13));
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Grille légère
+    ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+    ctx.lineWidth = 1;
+    for(let x=0;x<W;x+=pw(10)){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=0;y<H;y+=ph(10)){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+    // Titre carte
+    ctx.font = `bold ${pw(2.5)}px 'Press Start 2P',monospace`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillStyle='rgba(255,230,0,0.12)';
+    ctx.fillText('KANTO', pw(2), ph(1.5));
+  }
+
+  function drawFrame() {
+    mapPulseT += 0.045;
+    const ctx = canvas.getContext('2d');
+    const curZone    = player.currentZone || 'bourg-palette';
+    const accessible = ZONES[curZone]?.connexions || [];
+    const killNeeded = 15;
+    const killsOk = ((player.zoneKills||{})[curZone]||0) >= killNeeded;
+
+    ctx.clearRect(0,0,W,H);
+    drawMapBackground(ctx);
+
+    // Connexion lines between accessible zones
+    KANTO_ZONES.forEach(z => {
+      if (!ZONES[z.id]) return;
+      if (z.id === curZone) {
+        const kz = getZoneById(z.id);
+        const acc = ZONES[z.id]?.connexions || [];
+        acc.forEach(connId => {
+          const kz2 = getZoneById(connId);
+          if (!kz2) return;
+          ctx.save();
+          ctx.strokeStyle = killsOk ? 'rgba(255,214,10,0.4)' : 'rgba(255,100,100,0.25)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([pw(0.8),pw(0.5)]);
+          ctx.beginPath();
+          ctx.moveTo(px(kz.x),py(kz.y));
+          ctx.lineTo(px(kz2.x),py(kz2.y));
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        });
+      }
+    });
+
+    // Zones
+    mapHitZones = [];
+    KANTO_ZONES.forEach(z => {
+      if (!ZONES[z.id]) return;
+      const cx = px(z.x), cy = py(z.y);
+      const hw = pw(z.w)/2, hh = ph(z.h)/2;
+      const x1 = cx-hw, y1 = cy-hh, x2 = cx+hw, y2 = cy+hh;
+      const bw = hw*2, bh = hh*2;
+
+      const isCurrent    = z.id === curZone;
+      const isAccessible = accessible.includes(z.id);
+      const isVisited    = player.visitedZones.includes(z.id);
+      const col = ZONE_COLORS[z.type] || ZONE_COLORS.route;
+
+      if (!isVisited && !isCurrent) {
+        // Zone inconnue — afficher en très sombre avec ?
+        ctx.save();
+        rr(ctx, x1,y1,bw,bh, Math.min(6,bh*0.35));
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fill();
+        rr(ctx, x1,y1,bw,bh, Math.min(6,bh*0.35));
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth=1; ctx.stroke();
+        ctx.restore();
+        const fs2 = Math.max(6,Math.min(9,bh*0.38));
+        ctx.font=`900 ${fs2}px 'Press Start 2P',monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillStyle='rgba(255,255,255,0.12)';
+        ctx.fillText('?',cx,cy);
+        mapHitZones.push({id:z.id, x1,y1,x2,y2, accessible:false, visited:false, current:false});
+        return;
+      }
+
+      const rad = Math.min(6, bh*0.35);
+
+      // Fond semi-transparent
+      ctx.save();
+      rr(ctx, x1,y1,bw,bh,rad);
+      ctx.fillStyle = isCurrent
+        ? col.fill.replace(/[\d.]+\)$/, '0.6)')
+        : isAccessible
+          ? col.fill.replace(/[\d.]+\)$/, '0.42)')
+          : col.fill;
+      ctx.fill();
+
+      // Bordure
+      rr(ctx, x1,y1,bw,bh,rad);
+      if (isCurrent) {
+        const p = 0.6+0.4*Math.sin(mapPulseT);
+        ctx.strokeStyle = `rgba(255,255,255,${p})`;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = col.stroke; ctx.shadowBlur = 16*p;
+        ctx.stroke(); ctx.shadowBlur = 0;
+      } else if (isAccessible) {
+        const p = 0.5+0.5*Math.sin(mapPulseT+1);
+        const lockCol = killsOk ? `rgba(255,230,0,${p})` : `rgba(255,80,80,${p})`;
+        ctx.strokeStyle = lockCol;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = killsOk ? '#ffd60a' : '#ff4444'; ctx.shadowBlur = 10*p;
+        ctx.stroke(); ctx.shadowBlur = 0;
+      } else {
+        ctx.strokeStyle = col.stroke + '88';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Label
+      const fs = Math.max(7, Math.min(11, bh * 0.42));
+      ctx.font = `900 ${fs}px 'Press Start 2P',monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(0,0,0,0.9)';
+      ctx.fillText(z.label, cx+1, cy+1);
+      ctx.fillStyle = isCurrent ? '#ffffff' : isAccessible ? (killsOk?'#ffec00':'#ff8888') : col.text;
+      ctx.fillText(z.label, cx, cy);
+
+      // Marqueur joueur
+      if (isCurrent) {
+        const p = 0.7+0.3*Math.sin(mapPulseT*2);
+        ctx.font = `${bh*0.7}px serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.shadowColor = '#ffd60a'; ctx.shadowBlur = 16*p;
+        ctx.fillStyle = '#ffd60a';
+        ctx.fillText('★', cx, y1+2);
+        ctx.shadowBlur = 0;
+      }
+      // Icône verrou sur zones accessibles si pas assez de kills
+      if (isAccessible && !killsOk) {
+        ctx.font = `${bh*0.55}px serif`;
+        ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(255,80,80,0.9)';
+        ctx.fillText('🔒', x2-2, y1+1);
+      }
+
+      mapHitZones.push({id:z.id, x1,y1,x2,y2, accessible:isAccessible, visited:isVisited, current:isCurrent});
+    });
+
+    // Kills progress dans la zone actuelle (mini barre en bas de la carte)
+    const curKills = (player.zoneKills||{})[curZone]||0;
+    const needed = 15;
+    const barW = pw(30);
+    const barX = W - barW - pw(2);
+    const barY = H - ph(5);
+    ctx.fillStyle='rgba(0,0,0,0.6)'; rr(ctx,barX-4,barY-4,barW+8,ph(3.5)+8,4); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(barX,barY,barW,ph(3));
+    const prog = Math.min(1,curKills/needed);
+    const barColor = prog>=1 ? '#2dc653' : '#ffd60a';
+    ctx.fillStyle=barColor; ctx.fillRect(barX,barY,barW*prog,ph(3));
+    ctx.font=`bold ${pw(1.1)}px 'Press Start 2P',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.fillText(`${curKills}/${needed} ici`,barX+barW/2+0.5,barY+ph(1.5)+0.5);
+    ctx.fillStyle='#fff';
+    ctx.fillText(`${curKills}/${needed} ici`,barX+barW/2,barY+ph(1.5));
+
+    mapAnimFrame = requestAnimationFrame(drawFrame);
+  }
+
+  drawFrame();
+
+  const curZone = player.currentZone || 'bourg-palette';
+  hoverZone(curZone);
+  document.getElementById('map-cur-zone-lbl').textContent = 'Zone : '+(ZONES[curZone]?.name || curZone);
+  selectedZoneId = null;
+  document.getElementById('btn-travel').style.display = 'none';
+}
+
+// roundRect helper
+function rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+function hoverZone(id) {
+  const z = ZONES[id]; if (!z) return;
+  const kz = getZoneById(id);
+  const col = ZONE_COLORS[kz?.type || 'route'] || ZONE_COLORS.route;
+  document.getElementById('zone-info-name').textContent = z.name;
+  const badge = document.getElementById('zone-info-type-badge');
+  badge.textContent = (kz?.type || '').toUpperCase();
+  badge.style.background = col.fill.replace(/[\d.]+\)$/, '0.9)');
+  badge.style.color = col.text;
+  badge.style.border = '1px solid '+col.stroke;
+  document.getElementById('zone-info-desc').textContent = z.desc + ' — '+z.pokemon.length+' espèces';
+  const pd = document.getElementById('zone-info-pokes');
+  pd.innerHTML = '';
+  z.pokemon.slice(0,12).forEach(pid=>{
+    const img=document.createElement('img');
+    img.src=SPRITE_FRONT(pid); img.className='zone-poke-mini';
+    img.title=GEN1.find(p=>p.id===pid)?.n||'';
+    pd.appendChild(img);
+  });
+  // Compteur de kills
+  const killInfo = document.getElementById('zone-kill-info');
+  if (killInfo && player) {
+    const kills = (player.zoneKills||{})[id]||0;
+    const needed = 15;
+    const curZone = player.currentZone || 'bourg-palette';
+    const isVisited = (player.visitedZones||[]).includes(id);
+    const accessible = ZONES[curZone]?.connexions || [];
+
+    if (id === curZone) {
+      killInfo.style.display = 'block';
+      killInfo.textContent = `Zone actuelle · ${kills}/${needed} Pokémon vaincus`;
+      killInfo.style.color = 'rgba(255,255,255,.5)';
+    } else if (isVisited) {
+      killInfo.style.display = 'block';
+      killInfo.textContent = `✅ Déjà visitée — voyage libre !`;
+      killInfo.style.color = 'var(--green)';
+    } else if (accessible.includes(id)) {
+      killInfo.style.display = 'block';
+      const curKills = (player.zoneKills||{})[curZone]||0;
+      if (curKills >= needed) {
+        killInfo.textContent = `✅ Prêt à explorer ! (${curKills}/${needed})`;
+        killInfo.style.color = 'var(--green)';
+      } else {
+        killInfo.textContent = `🔒 Vaincre ${needed - curKills} Pokémon ici d'abord`;
+        killInfo.style.color = 'rgba(255,100,100,.9)';
+      }
+    } else {
+      killInfo.style.display = 'none';
+    }
+  }
+}
+
+function selectZone(id) {
+  const z = ZONES[id]; if (!z) return;
+  const curZone = player.currentZone || 'bourg-palette';
+  if (!player.visitedZones) player.visitedZones = ['bourg-palette'];
+  const isVisited = player.visitedZones.includes(id);
+  const isCurrent = id === curZone;
+  const killNeeded = 15;
+  const kills = (player.zoneKills||{})[curZone]||0;
+  const killsOk = kills >= killNeeded;
+
+  hoverZone(id);
+
+  if (isCurrent) {
+    selectedZoneId = null;
+    document.getElementById('btn-travel').style.display = 'none';
+    return;
+  }
+
+  if (isVisited) {
+    selectedZoneId = id;
+    const btn = document.getElementById('btn-travel');
+    btn.style.display = 'block';
+    // Pas de blocage pour les zones déjà visitées — on peut y retourner librement
+    btn.disabled = false;
+    btn.textContent = `🚶 Aller à ${z.name}`;
+  } else {
+    // Zone non encore visitée — doit être adjacente ET avoir les kills
+    const accessible = ZONES[curZone]?.connexions || [];
+    if (accessible.includes(id)) {
+      selectedZoneId = id;
+      const btn = document.getElementById('btn-travel');
+      btn.style.display = 'block';
+      if (killsOk) {
+        btn.disabled = false;
+        btn.textContent = `🚶 Explorer ${z.name}`;
+      } else {
+        btn.disabled = true;
+        btn.textContent = `🔒 ${kills}/${killNeeded} victoires requises`;
+      }
+    } else {
+      selectedZoneId = null;
+      document.getElementById('btn-travel').style.display = 'none';
+    }
+  }
+}
+
+function travelToZone() {
+  if (!selectedZoneId || !player) return;
+  const z = ZONES[selectedZoneId]; if (!z) return;
+  if (!player.visitedZones) player.visitedZones = ['bourg-palette'];
+  const isVisited = player.visitedZones.includes(selectedZoneId);
+  const curZone = player.currentZone || 'bourg-palette';
+
+  // Si la zone n'est pas encore visitée, vérifier les kills
+  if (!isVisited) {
+    const killNeeded = 15;
+    const kills = (player.zoneKills||{})[curZone]||0;
+    if (kills < killNeeded) {
+      notify(`🔒 Vaincre ${killNeeded - kills} Pokémon de plus dans cette zone !`);
+      return;
+    }
+  }
+
+  player.currentZone = selectedZoneId;
+  if (!player.visitedZones.includes(selectedZoneId)) player.visitedZones.push(selectedZoneId);
+  if (mapAnimFrame) { cancelAnimationFrame(mapAnimFrame); mapAnimFrame = null; }
+  showScreen('game');
+  showZone(z.name);
+  setMessage(`Vous arrivez à ${z.name} ! ${z.desc}`);
+  updateHUD(); drawMinimap();
+  notify(`→ ${z.name}`);
+}
+
+document.getElementById('map-canvas').addEventListener('mousemove',e=>{
+  const rect=e.target.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const hit=mapHitZones.find(z=>mx>=z.x1&&mx<=z.x2&&my>=z.y1&&my<=z.y2);
+  const tip=document.getElementById('map-tooltip');
+  if(hit&&ZONES[hit.id]){
+    hoverZone(hit.id);
+    const isVisited = player.visitedZones?.includes(hit.id);
+    const isCurrent = hit.id === (player.currentZone||'bourg-palette');
+    let tipSuffix = '';
+    if (isCurrent) tipSuffix = ' ✦ Zone actuelle';
+    else if (isVisited) tipSuffix = ' ✦ Cliquer pour y retourner';
+    else if (hit.accessible) tipSuffix = ' ✦ Nouvelle zone — cliquer';
+    tip.textContent = ZONES[hit.id].name + tipSuffix;
+    tip.style.left=(mx+14)+'px'; tip.style.top=(my-12)+'px';
+    tip.classList.add('show');
+    e.target.style.cursor=hit.accessible?'pointer':(hit.current?'default':'default');
+  } else {
+    tip.classList.remove('show');
+    e.target.style.cursor='default';
+  }
+});
+document.getElementById('map-canvas').addEventListener('click',e=>{
+  const rect=e.target.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const hit=mapHitZones.find(z=>mx>=z.x1&&mx<=z.x2&&my>=z.y1&&my<=z.y2);
+  if(hit) selectZone(hit.id);
+});
+document.getElementById('map-canvas').addEventListener('mouseleave',()=>{
+  document.getElementById('map-tooltip').classList.remove('show');
+});
+
+// ══════════════════════════════════════════
+// SWITCH POKEMON IN BATTLE
+// ══════════════════════════════════════════
+let switchForcedAfterKO = false;
+
+function openSwitchMenu(forced=false) {
+  if (!player || !player.roster || player.roster.length <= 1) {
+    if (!forced) notify('Pas d\'autre Pokémon dans l\'équipe !');
+    return;
+  }
+  switchForcedAfterKO = forced;
+  const list = document.getElementById('switch-poke-list');
+  list.innerHTML = '';
+  player.roster.forEach((p, idx) => {
+    const isActive = idx === (player.activeRosterIdx||0);
+    const isFainted = p.hp <= 0;
+    const dual = p.dualType || getPokeType(p.currentSpriteId||p.spriteId, p.type);
+    const typeBadges = dual.includes('/') 
+      ? dual.split('/').map(t=>`<span class="poke-type-badge type-${t}" style="font-size:.28rem;padding:.1rem .35rem">${t}</span>`).join('')
+      : `<span class="poke-type-badge type-${dual}" style="font-size:.28rem;padding:.1rem .35rem">${dual}</span>`;
+    const card = document.createElement('div');
+    card.className = `switch-poke-card${isActive?' active-poke':''}${isFainted?' fainted':''}`;
+    const imgSrc = p.isShiny ? SPRITE_SHINY(p.currentSpriteId||p.spriteId) : SPRITE_FRONT(p.currentSpriteId||p.spriteId);
+    const shinyStyle = p.isShiny ? 'filter:drop-shadow(0 0 5px #ffd700)' : '';
+    const shinyLabel = p.isShiny ? ' ✨' : '';
+    card.innerHTML = `
+      <img src="${imgSrc}" style="width:64px;height:64px;image-rendering:pixelated;${shinyStyle}"/>
+      <div style="font-family:'Press Start 2P',monospace;font-size:.38rem;color:${p.isShiny?'#ffd700':'var(--yellow)'};line-height:1.6">${p.currentName||p.name}${shinyLabel}${isActive?' ★':''}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:.32rem;color:rgba(255,255,255,.6)">Niv.${p.level}</div>
+      <div style="display:flex;gap:2px;flex-wrap:wrap;justify-content:center">${typeBadges}</div>
+      <div style="width:90px;height:5px;background:rgba(0,0,0,.4);border-radius:999px;overflow:hidden;margin-top:.2rem">
+        <div style="height:100%;background:linear-gradient(90deg,#e63946,#ff6b9d);width:${Math.max(0,Math.round((p.hp/p.maxHp)*100))}%;border-radius:999px"></div>
+      </div>
+      <div style="font-size:.6rem;color:rgba(255,255,255,.5)">${Math.ceil(p.hp)}/${p.maxHp}</div>
+    `;
+    if (!isFainted && !isActive) card.onclick = () => confirmSwitch(idx);
+    list.appendChild(card);
+  });
+  document.getElementById('switch-pokemon-menu').classList.add('active');
+}
+
+function closeSwitchMenu() {
+  if (switchForcedAfterKO) return; // can't cancel forced switch
+  document.getElementById('switch-pokemon-menu').classList.remove('active');
+}
+
+function confirmSwitch(idx) {
+  const success = switchToRosterPoke(idx, true);
+  if (!success) return;
+  document.getElementById('switch-pokemon-menu').classList.remove('active');
+  switchForcedAfterKO = false;
+
+  // Update battle UI
+  const activePoke = getActivePoke();
+  document.getElementById('player-battle-img').src = activePoke?.isShiny ? SPRITE_SHINY(player.currentSpriteId) : SPRITE_FRONT(player.currentSpriteId);
+  const shinyLabel = activePoke?.isShiny ? ' ✨' : '';
+  document.getElementById('b-player-name').textContent = player.currentName + shinyLabel;
+  document.getElementById('b-player-level').textContent = 'Niv.'+player.level;
+  const pSpdEl = document.getElementById('b-player-spd');
+  if(pSpdEl) pSpdEl.textContent = '⚡'+player.spd;
+  const pTypeBadge = document.getElementById('b-player-type');
+  const dual = player.dualType || getPokeType(player.currentSpriteId, player.type);
+  if (dual.includes('/')) {
+    const [t1,t2] = dual.split('/');
+    pTypeBadge.innerHTML = `<span class="poke-type-badge type-${t1}" style="margin-right:2px">${t1}</span><span class="poke-type-badge type-${t2}">${t2}</span>`;
+    pTypeBadge.className = '';
+  } else {
+    pTypeBadge.textContent = dual;
+    pTypeBadge.className = 'poke-type-badge type-'+dual;
+  }
+  document.getElementById('btn-attack').innerHTML = `⚔ ${player.move} <span class="atk-elem-badge elem-${player.moveElem||player.type}">${player.moveElem||player.type}</span>`;
+  document.getElementById('btn-magic').innerHTML  = `✨ ${player.mMove} <span class="atk-elem-badge elem-${player.mMoveElem||player.type}">${player.mMoveElem||player.type}</span>`;
+  updateBattleHp(); updateHUD();
+  document.getElementById('battle-log').textContent = `⇄ Go, ${player.currentName} !`;
+
+  // Enemy gets a free attack on switch
+  disableBattleButtons(true);
+  setBattleTurn('enemy');
+}
+
+// MINIMAP
+// ══════════════════════════════════════════
+const mapState={ px:50, py:60 };
+function drawMinimap() {
+  const canvas=document.getElementById('minimap-canvas'), ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,100,80);
+  ctx.fillStyle='#0a1a3a'; ctx.fillRect(0,0,100,80);
+  ctx.fillStyle='#1a4060'; ctx.fillRect(0,20,100,25);
+  ctx.fillStyle='#c9a96e'; ctx.fillRect(0,45,100,35);
+  ctx.fillStyle='#2d7a3a'; ctx.fillRect(5,48,30,20); ctx.fillRect(60,50,25,15);
+  mapState.px=Math.min(92,Math.max(8,mapState.px+(Math.random()-.5)*4));
+  mapState.py=Math.min(74,Math.max(50,mapState.py+(Math.random()-.5)*2));
+  ctx.fillStyle='#ffd60a'; ctx.beginPath(); ctx.arc(mapState.px,mapState.py,3.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(255,214,10,.6)'; ctx.lineWidth=1; ctx.stroke();
+}
+
+// ══════════════════════════════════════════
+// CLASS SELECTION
+// ══════════════════════════════════════════
+document.getElementById('class-grid').addEventListener('click', e=>{
+  const btn=e.target.closest('.class-btn');
+  if (!btn) return;
+  document.querySelectorAll('.class-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+});
+
+// ══════════════════════════════════════════
+// PARTICLES + MOUSE PARALLAX
+// ══════════════════════════════════════════
+document.addEventListener('mousemove', e => {
+  const bgImg = document.getElementById('bg-img');
+  const bgLight = document.getElementById('bg-light');
+  const mx = e.clientX / window.innerWidth;
+  const my = e.clientY / window.innerHeight;
+  const tx = (mx - 0.5) * 18;
+  const ty = (my - 0.5) * 12;
+  bgImg.style.transform = `translate(${tx}px, ${ty}px) scale(1.06)`;
+  // Light follows cursor
+  bgLight.style.background = `radial-gradient(circle 350px at ${e.clientX}px ${e.clientY}px, rgba(255,214,10,0.09) 0%, rgba(76,201,240,0.04) 40%, transparent 70%)`;
+});
+
+const pCont=document.getElementById('particles');
+for (let i=0;i<30;i++){
+  const s=document.createElement('div'); s.className='spark';
+  s.style.left=Math.random()*100+'vw';
+  s.style.animationDuration=(9+Math.random()*14)+'s';
+  s.style.animationDelay=(-Math.random()*22)+'s';
+  s.style.width=s.style.height=(2+Math.random()*3)+'px';
+  s.style.background=Math.random()>.5?'#4cc9f0':'#ffd60a';
+  pCont.appendChild(s);
+}
+</script>
+</body>
+</html>
